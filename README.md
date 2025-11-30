@@ -22,8 +22,6 @@
 - **Flask-SQLAlchemy 3.0.5** - ORM 数据库操作
 - **Flask-SocketIO 5.3.6** - WebSocket 实时通信
 - **PyMySQL 1.1.0** - MySQL 数据库驱动
-- **Gunicorn 21.2.0** - WSGI HTTP 服务器
-- **Eventlet 0.33.3** - 异步网络库
 
 ### 前端
 - **Vue.js 3.4.38** - 前端框架
@@ -101,6 +99,19 @@ python init_games.py
 
 ### 5. 安装前端依赖并构建
 
+**方式一：使用自动化脚本（推荐）**
+
+```bash
+python updateVue.py
+```
+
+该脚本会自动完成：
+- 安装前端依赖（npm install）
+- 构建 Vue 项目（npm run build）
+- 部署到 static/dist 目录
+
+**方式二：手动构建**
+
 ```bash
 cd webGamesVue
 npm install
@@ -110,16 +121,8 @@ cd ..
 
 ### 6. 运行服务器
 
-#### 开发模式
-
 ```bash
 python app.py
-```
-
-#### 生产模式（使用 Gunicorn）
-
-```bash
-gunicorn -k eventlet -w 4 --bind 0.0.0.0:5000 app:app
 ```
 
 服务器默认运行在 `http://localhost:5000`
@@ -128,14 +131,21 @@ gunicorn -k eventlet -w 4 --bind 0.0.0.0:5000 app:app
 
 ### 游戏上传
 
+平台提供完全自动化的游戏上传功能，无需手动操作：
+
 1. **上传 ZIP 压缩包**
    - 访问 `/upload-game` 页面
    - 选择包含 `index.html` 的 ZIP 文件
-   - 系统会自动解压并部署游戏
+   - 系统会自动解压、部署并配置游戏，立即可用
 
 2. **上传外部链接**
-   - 通过 API `/upload-link` 提交游戏链接
-   - 支持外部游戏链接的添加
+   - 通过 Web 界面或 API `/upload-link` 提交游戏链接
+   - 系统自动添加外部游戏链接，支持即时访问
+
+所有上传的游戏都会自动：
+- 解压和部署到服务器
+- 在数据库中创建配置记录
+- 出现在游戏列表中供用户游玩
 
 ### 多人游戏
 
@@ -216,29 +226,29 @@ IP 黑名单表
 
 ## 开发说明
 
-### 添加新游戏
-
-1. 在 `templates/games/` 目录下创建游戏文件夹
-2. 确保包含 `index.html` 文件
-3. 运行 `python init_games.py` 初始化配置
-
 ### 前端开发
+
+**开发模式**
 
 ```bash
 cd webGamesVue
-npm run dev  # 开发模式
-npm run build  # 构建生产版本
+npm run dev  # 开发模式，支持热重载
+```
+
+**构建生产版本**
+
+```bash
+# 使用自动化脚本（推荐）
+python updateVue.py
+
+# 或手动构建
+cd webGamesVue
+npm install
+npm run build
+cd ..
 ```
 
 ### 日志
 
 - 访问日志：`logs/access.log`
 - 应用日志：控制台输出
-
-## 部署建议
-
-1. **使用 Gunicorn + Eventlet** 作为 WSGI 服务器
-2. **配置 Nginx** 作为反向代理
-3. **使用 Redis** 实现频率限制和会话管理（可选）
-4. **配置 HTTPS** 以保护用户数据
-5. **定期备份数据库**

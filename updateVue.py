@@ -69,8 +69,21 @@ def main():
             print("❌ 错误: webGamesVue/package.json 不存在!")
             sys.exit(1)
         
-        # 步骤1: 构建Vue项目
-        print_step("第1步: 构建Vue项目")
+        # 步骤1: 安装依赖
+        print_step("第1步: 安装前端依赖")
+        print(f"Vue项目目录: {vue_project_dir}")
+        
+        node_modules_dir = vue_project_dir / "node_modules"
+        if not node_modules_dir.exists():
+            print("ℹ️  node_modules 目录不存在，开始安装依赖...")
+            run_command("npm install", cwd=vue_project_dir)
+            print("✅ 依赖安装完成!")
+        else:
+            print("ℹ️  node_modules 已存在，跳过依赖安装")
+            print("💡 如需重新安装依赖，请删除 node_modules 目录后重新运行此脚本")
+        
+        # 步骤2: 构建Vue项目
+        print_step("第2步: 构建Vue项目")
         print(f"Vue项目目录: {vue_project_dir}")
         
         # 运行npm run build
@@ -83,8 +96,8 @@ def main():
             print("❌ 错误: 构建失败，dist目录不存在!")
             sys.exit(1)
         
-        # 步骤2: 备份现有的static/dist目录（如果存在）
-        print_step("第2步: 备份现有文件")
+        # 步骤3: 备份现有的static/dist目录（如果存在）
+        print_step("第3步: 备份现有文件")
         
         if static_dist_dir.exists():
             backup_dir = current_dir / "static" / "dist_backup"
@@ -95,8 +108,8 @@ def main():
         else:
             print("ℹ️  static/dist 目录不存在，无需备份")
         
-        # 步骤3: 复制新的dist目录
-        print_step("第3步: 部署新文件")
+        # 步骤4: 复制新的dist目录
+        print_step("第4步: 部署新文件")
         
         print(f"从: {vue_dist_dir}")
         print(f"到: {static_dist_dir}")
@@ -106,7 +119,7 @@ def main():
         
         print("✅ 文件复制完成!")
         
-        # 步骤4: 显示结果
+        # 步骤5: 显示结果
         print_step("部署完成")
         print("🎉 Vue项目已成功构建并部署!")
         print(f"📁 新的静态文件位于: {static_dist_dir}")
@@ -122,8 +135,8 @@ def main():
         print(f"\n❌ 命令执行失败: {e}")
         print("💡 请检查:")
         print("   1. 确保已安装 Node.js 和 npm")
-        print("   2. 确保在 webGamesVue 目录下运行过 'npm install'")
-        print("   3. 检查 package.json 中是否有 'build' 脚本")
+        print("   2. 检查 package.json 中是否有 'build' 脚本")
+        print("   3. 检查网络连接（npm install 需要下载依赖）")
         sys.exit(1)
         
     except PermissionError as e:
