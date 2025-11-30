@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>弹弹堂游戏</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="game-container">
+        <!-- 游戏标题 -->
+        <div class="game-header">
+            <h1>🎯 弹弹堂游戏 🎯</h1>
+        </div>
+        
+        <!-- 游戏统计信息 -->
+        <div class="game-stats">
+            <div class="stat-item">
+                <span class="stat-label">分数</span>
+                <span class="stat-value" id="score">0</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">击中数</span>
+                <span class="stat-value" id="hits">0</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">发射数</span>
+                <span class="stat-value" id="shots">0</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">命中率</span>
+                <span class="stat-value" id="accuracy">0%</span>
+            </div>
+        </div>
+
+        <!-- 游戏画布 -->
+        <div class="game-canvas-container">
+            <canvas id="gameCanvas" width="800" height="400"></canvas>
+            <div class="play-button" id="playButton">▶</div>
+        </div>
+
+        <!-- 游戏控制面板 -->
+        <div class="game-controls">
+            <div class="control-group">
+                <label for="angleSlider">角度</label>
+                <input type="range" id="angleSlider" min="0" max="90" value="45">
+                <span id="angleValue">45°</span>
+            </div>
+            <div class="control-group">
+                <label for="powerSlider">力度</label>
+                <input type="range" id="powerSlider" min="10" max="100" value="50">
+                <span id="powerValue">50</span>
+            </div>
+            <div class="control-buttons">
+                <button id="leftBtn">⬅ 左移</button>
+                <button id="rightBtn">右移 ➡</button>
+                <button id="fireBtn">🔥 发射</button>
+                <button id="resetBtn">🔄 重置游戏</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html> 

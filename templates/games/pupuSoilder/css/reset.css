@@ -1,0 +1,59 @@
+/* 基础重置样式 - 仅包含必要部分以保证跨浏览器一致性 */
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html, body {
+    width: 100%;
+    height: 100%;
+    overflow: hidden; /* 防止滚动条出现影响游戏体验 */
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+    line-height: 1.2;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+button {
+    border: none;
+    background: none;
+    cursor: pointer;
+    font-family: inherit;
+    outline: none;
+}
+
+button:focus {
+    outline: 2px solid rgba(175, 229, 155, 0.5);
+    outline-offset: 2px;
+}
+
+canvas {
+    display: block;
+}
+
+template {
+    display: none;
+}
+
+/* 移动设备触摸优化 */
+* {
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+}
+
+/* 禁用某些移动端默认行为 */
+body {
+    -webkit-overflow-scrolling: touch;
+    position: fixed; /* 防止移动端地址栏影响游戏区域 */
+    width: 100%;
+    height: 100%;
+} 

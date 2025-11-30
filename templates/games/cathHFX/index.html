@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>警察抓何飞翔</title>
+    <style>
+        body {
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background-color: #f0f0f0;
+            font-family: Arial, sans-serif;
+        }
+        .game-container {
+            text-align: center;
+        }
+        .board {
+            position: relative;
+            width: 500px;
+            height: 500px;
+            background-color: #bbada0;
+            border: 2px solid #8f7a66;
+            margin: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+        }
+        .position {
+            position: absolute;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background-color: #eee4da;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 16px;
+            border: 2px solid #8f7a66;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+        .position:hover {
+            background-color: #ede0c8;
+            transform: scale(1.05);
+        }
+        .position.connected {
+            background-color: #fff;
+        }
+        .position.police {
+            background-color: #3498db;
+            color: white;
+            box-shadow: 0 2px 8px rgba(52, 152, 219, 0.4);
+        }
+        .position.hefeixiang {
+            background-color: #e74c3c;
+            color: white;
+            box-shadow: 0 2px 8px rgba(231, 76, 60, 0.4);
+        }
+        .position.available {
+            background-color: #2ecc71;
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(46, 204, 113, 0.4);
+        }
+        .line {
+            position: absolute;
+            background-color: #8f7a66;
+            transform-origin: 0 0;
+            height: 3px;
+        }
+        .status {
+            font-size: 24px;
+            margin: 20px 0;
+            color: #2c3e50;
+        }
+        .move-counter {
+            font-size: 20px;
+            margin: 10px 0;
+            color: #7f8c8d;
+        }
+        .game-over {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255, 255, 255, 0.95);
+            padding: 30px;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.2);
+            display: none;
+        }
+        .restart-btn {
+            margin-top: 20px;
+            padding: 12px 30px;
+            font-size: 20px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        .restart-btn:hover {
+            background-color: #2980b9;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <div class="status" id="status">抓住何飞翔！</div>
+        <div class="move-counter" id="move-counter">步数: 0</div>
+        <div class="board" id="board"></div>
+    </div>
+    <div id="game-over" class="game-over">
+        <h2>游戏结束!</h2>
+        <p id="result-message">警察抓住了何飞翔！</p>
+        <button class="restart-btn" onclick="startGame()">重新开始</button>
+    </div>
+
+    <script>
+        const POSITIONS = {
+            1: { x: 220, y: 50, connections: [2, 3, 6] },
+            2: { x: 50, y: 220, connections: [1, 4] },
+            3: { x: 390, y: 220, connections: [1, 5] },
+            4: { x: 120, y: 390, connections: [2, 5, 6] },
+            5: { x: 320, y: 390, connections: [3, 4, 6] },
+            6: { x: 220, y: 220, connections: [1, 4, 5] }
+        };
+
+        let currentPlayer = 'police';
+        let policePosition = null;
+        let hefeixiangPosition = null;
+        let availableMoves = [];
+        let isAIMoving = false;
+        let moveCount = 0;
+
+        function startGame() {
+            // 重置游戏状态
+            currentPlayer = 'police';
+            moveCount = 0;
+            document.getElementById('status').textContent = '抓住何飞翔！';
+            document.getElementById('move-counter').textContent = '步数: 0';
+            document.getElementById('game-over').style.display = 'none';
+            
+            // 清空棋盘
+            const board = document.getElementById('board');
+            board.innerHTML = '';
+
+            // 创建连线
+            createConnections();
+
+            // 创建位置点
+            createPositions();
+
+            // 随机放置角色
+            placeCharacters();
+
+            // 显示可移动位置
+            showAvailableMoves();
+        }
+
+        function createConnections() {
+            const board = document.getElementById('board');
+            for (let pos in POSITIONS) {
+                const connections = POSITIONS[pos].connections;
+                connections.forEach(connectedPos => {
+                    if (connectedPos > pos) { // 避免重复创建连线
+                        const line = document.createElement('div');
+                        line.className = 'line';
+                        
+                        const start = POSITIONS[pos];
+                        const end = POSITIONS[connectedPos];
+                        
+                        const length = Math.sqrt(Math.pow(end.x - start.x, 2) + Math.pow(end.y - start.y, 2));
+                        const angle = Math.atan2(end.y - start.y, end.x - start.x);
+                        
+                        line.style.width = `${length}px`;
+                        line.style.left = `${start.x + 30}px`;
+                        line.style.top = `${start.y + 30}px`;
+                        line.style.transform = `rotate(${angle}rad)`;
+                        
+                        board.appendChild(line);
+                    }
+                });
+            }
+        }
+
+        function createPositions() {
+            const board = document.getElementById('board');
+            for (let pos in POSITIONS) {
+                const position = document.createElement('div');
+                position.className = 'position';
+                position.style.left = `${POSITIONS[pos].x}px`;
+                position.style.top = `${POSITIONS[pos].y}px`;
+                position.dataset.position = pos;
+                position.onclick = () => handlePositionClick(pos);
+                board.appendChild(position);
+            }
+        }
+
+        function placeCharacters() {
+            // 随机选择两个不相连的位置
+            let positions = [1, 2, 3, 4, 5, 6];
+            positions = positions.sort(() => Math.random() - 0.5);
+            
+            policePosition = positions[0];
+            hefeixiangPosition = positions[1];
+            
+            // 确保两个位置不相连
+            while (POSITIONS[policePosition].connections.includes(hefeixiangPosition)) {
+                positions = positions.sort(() => Math.random() - 0.5);
+                policePosition = positions[0];
+                hefeixiangPosition = positions[1];
+            }
+
+            // 放置角色
+            document.querySelector(`[data-position="${policePosition}"]`).classList.add('police');
+            document.querySelector(`[data-position="${policePosition}"]`).textContent = '警察';
+            document.querySelector(`[data-position="${hefeixiangPosition}"]`).classList.add('hefeixiang');
+            document.querySelector(`[data-position="${hefeixiangPosition}"]`).textContent = '何飞翔';
+        }
+
+        function showAvailableMoves() {
+            // 清除之前的可移动位置
+            document.querySelectorAll('.available').forEach(el => {
+                el.classList.remove('available');
+            });
+
+            const currentPos = currentPlayer === 'police' ? policePosition : hefeixiangPosition;
+            const availablePositions = POSITIONS[currentPos].connections;
+
+            availablePositions.forEach(pos => {
+                const position = document.querySelector(`[data-position="${pos}"]`);
+                // 如果是警察的回合，允许移动到何飞翔的位置
+                if (currentPlayer === 'police') {
+                    if (!position.classList.contains('police')) {
+                        position.classList.add('available');
+                    }
+                } else {
+                    // 何飞翔不能移动到警察的位置
+                    if (!position.classList.contains('police') && !position.classList.contains('hefeixiang')) {
+                        position.classList.add('available');
+                    }
+                }
+            });
+        }
+
+        function handlePositionClick(position) {
+            if (isAIMoving) return;
+            
+            const clickedPosition = document.querySelector(`[data-position="${position}"]`);
+            if (!clickedPosition.classList.contains('available')) return;
+
+            // 移动警察
+            document.querySelector(`[data-position="${policePosition}"]`).classList.remove('police');
+            document.querySelector(`[data-position="${policePosition}"]`).textContent = '';
+            
+            clickedPosition.classList.add('police');
+            clickedPosition.textContent = '警察';
+
+            // 更新警察位置
+            policePosition = parseInt(position);
+            if (policePosition === hefeixiangPosition) {
+                endGame(true);
+                return;
+            }
+
+            // 增加步数
+            moveCount++;
+            document.getElementById('move-counter').textContent = `步数: ${moveCount}`;
+
+            // 显示可移动位置
+            showAvailableMoves();
+
+            // 延迟一下让AI移动，这样玩家能看清警察的移动
+            setTimeout(() => {
+                moveAI();
+            }, 500);
+        }
+
+        function moveAI() {
+            isAIMoving = true;
+            document.getElementById('status').textContent = '何飞翔回合';
+
+            // 获取何飞翔可移动的位置
+            const availablePositions = POSITIONS[hefeixiangPosition].connections;
+            const validMoves = availablePositions.filter(pos => 
+                pos !== policePosition && 
+                !document.querySelector(`[data-position="${pos}"]`).classList.contains('police')
+            );
+
+            if (validMoves.length > 0) {
+                // 选择离警察最远的位置
+                let bestMove = validMoves[0];
+                let maxDistance = 0;
+
+                validMoves.forEach(pos => {
+                    const distance = calculateDistance(pos, policePosition);
+                    if (distance > maxDistance) {
+                        maxDistance = distance;
+                        bestMove = pos;
+                    }
+                });
+
+                // 移动何飞翔
+                document.querySelector(`[data-position="${hefeixiangPosition}"]`).classList.remove('hefeixiang');
+                document.querySelector(`[data-position="${hefeixiangPosition}"]`).textContent = '';
+                
+                const newPosition = document.querySelector(`[data-position="${bestMove}"]`);
+                newPosition.classList.add('hefeixiang');
+                newPosition.textContent = '何飞翔';
+                
+                hefeixiangPosition = bestMove;
+            }
+
+            isAIMoving = false;
+            document.getElementById('status').textContent = '抓住何飞翔！';
+            showAvailableMoves();
+        }
+
+        function calculateDistance(pos1, pos2) {
+            const p1 = POSITIONS[pos1];
+            const p2 = POSITIONS[pos2];
+            return Math.sqrt(Math.pow(p2.x - p1.x, 2) + Math.pow(p2.y - p1.y, 2));
+        }
+
+        function endGame(policeWon) {
+            document.getElementById('result-message').textContent = policeWon ? '警察抓住了何飞翔！' : '何飞翔逃脱了！';
+            document.getElementById('game-over').style.display = 'block';
+        }
+
+        // 开始游戏
+        startGame();
+    </script>
+</body>
+</html> 

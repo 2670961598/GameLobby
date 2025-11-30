@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>俄罗斯方块</title>
+<style>
+  body{font-family:Arial,Helvetica,sans-serif;background:#f5f5f5;margin:0;display:flex;flex-direction:column;align-items:center}
+  h1{margin:20px 0 10px}
+  #panel{display:flex;gap:20px}
+  canvas{background:#111;border:2px solid #333}
+  #info{display:flex;flex-direction:column;gap:8px}
+  #info div{font-size:18px;font-weight:bold}
+  #controls{margin:10px 0}
+  button.btn{padding:8px 18px;font-size:16px;cursor:pointer;margin-top:8px}
+  a.back{margin-top:10px;padding:6px 16px;background:#3498db;color:#fff;border-radius:4px;text-decoration:none;display:inline-block;text-align:center}
+</style>
+</head>
+<body>
+<h1>俄罗斯方块</h1>
+<div id="controls">
+  难度：
+  <label><input type="radio" name="diff" value="easy" checked> 简单</label>
+  <label><input type="radio" name="diff" value="medium"> 中等</label>
+  <label><input type="radio" name="diff" value="hard"> 困难</label>
+</div>
+<div id="panel">
+  <canvas id="board" width="240" height="480"></canvas>
+  <div id="info">
+    <canvas id="next" width="120" height="120"></canvas>
+    <div id="score">分数: 0</div>
+  </div>
+</div>
+<button id="btn-start" class="btn">开始游戏</button>
+<a href="/" class="back">返回列表</a>
+
+<script>
+const BOARD_CANVAS=document.getElementById('board');
+const NEXT_CANVAS=document.getElementById('next');
+const ctx=BOARD_CANVAS.getContext('2d');
+const nextCtx=NEXT_CANVAS.getContext('2d');
+const scoreEl=document.getElementById('score');
+const startBtn=document.getElementById('btn-start');
+
+const SIZE=24; // cell px
+const COLOR_MAP={
+  I:'#00ffff',J:'#0000ff',L:'#ff7f00',O:'#ffff00',S:'#00ff00',T:'#800080',Z:'#ff0000'
+};
+const SHAPES={
+  I:[[1,1,1,1]],
+  J:[[1,0,0],[1,1,1]],
+  L:[[0,0,1],[1,1,1]],
+  O:[[1,1],[1,1]],
+  S:[[0,1,1],[1,1,0]],
+  T:[[0,1,0],[1,1,1]],
+  Z:[[1,1,0],[0,1,1]]
+};
+const DIFF={
+  easy:{cols:10,rows:20,speed:700},
+  medium:{cols:8,rows:20,speed:500},
+  hard:{cols:6,rows:20,speed:300}
+};
+let COLS=10,ROWS=20,speed=700;
+let board,curPiece,nextPiece,curX,curY,timer,score,playerName,running=false,diff='easy';
+
+function resetBoard(){board=Array.from({length:ROWS},()=>Array(COLS).fill(''));}
+function randomPiece(){const keys=Object.keys(SHAPES);const k=keys[Math.floor(Math.random()*keys.length)];return {shape:SHAPES[k],type:k};}
+function rotate(matrix){const rows=matrix.length,cols=matrix[0].length;const res=Array.from({length:cols},()=>Array(rows).fill(0));for(let y=0;y<rows;y++)for(let x=0;x<cols;x++)res[x][rows-1-y]=matrix[y][x];return res;}
+function canMove(nx,ny,shape){for(let y=0;y<shape.length;y++)for(let x=0;x<shape[0].length;x++){if(!shape[y][x])continue;const xx=nx+x,yy=ny+y;if(xx<0||xx>=COLS||yy>=ROWS)return false;if(yy>=0 && board[yy][xx])return false;}return true;}
+function place(){const shape=curPiece.shape;for(let y=0;y<shape.length;y++)for(let x=0;x<shape[0].length;x++){if(shape[y][x]){board[curY+y][curX+x]=curPiece.type;}}
+ clearLines(); spawn();}
+function clearLines(){let lines=0;for(let y=ROWS-1;y>=0;y--){if(board[y].every(v=>v)){board.splice(y,1);board.unshift(Array(COLS).fill(''));lines++;y++;}}
+ if(lines){score+=lines*100;updateScore();}}
+function spawn(){curPiece=nextPiece||randomPiece();nextPiece=randomPiece();curX=Math.floor((COLS-curPiece.shape[0].length)/2);curY=-1;if(!canMove(curX,curY+1,curPiece.shape)){gameOver();return;} drawNext();}
+function drawCell(gx,gy,type,context){context.fillStyle=COLOR_MAP[type];context.fillRect(gx*SIZE,gy*SIZE,SIZE-1,SIZE-1);} 
+function draw(){ctx.clearRect(0,0,BOARD_CANVAS.width,BOARD_CANVAS.height);for(let y=0;y<ROWS;y++)for(let x=0;x<COLS;x++){if(board[y][x])drawCell(x,y,board[y][x],ctx);} // current
+ const shape=curPiece.shape;for(let y=0;y<shape.length;y++)for(let x=0;x<shape[0].length;x++){if(shape[y][x])drawCell(curX+x,curY+y,curPiece.type,ctx);} }
+function drawNext(){nextCtx.clearRect(0,0,NEXT_CANVAS.width,NEXT_CANVAS.height);const shape=nextPiece.shape;const offsetX=Math.floor((4-shape[0].length)/2);const offsetY=Math.floor((4-shape.length)/2);for(let y=0;y<shape.length;y++)for(let x=0;x<shape[0].length;x++){if(shape[y][x])drawCell(offsetX+x,offsetY+y,nextPiece.type,nextCtx);} }
+function drop(){if(canMove(curX,curY+1,curPiece.shape)){curY++;}else{place();}
+ draw();}
+function startLoop(){timer=setInterval(drop,speed);}function stopLoop(){clearInterval(timer);}function updateScore(){scoreEl.textContent=`分数: ${score}`;}
+function startGame(){if(running)return;playerName=prompt('请输入姓名：',playerName||'');if(!playerName)return;diff=document.querySelector('input[name="diff"]:checked').value;COLS=DIFF[diff].cols;ROWS=DIFF[diff].rows;speed=DIFF[diff].speed;BOARD_CANVAS.width=COLS*SIZE;BOARD_CANVAS.height=ROWS*SIZE;resetBoard();score=0;updateScore();nextPiece=randomPiece();spawn();draw();startLoop();running=true;startBtn.disabled=true;}
+function gameOver(){stopLoop();running=false;alert(`游戏结束!\n得分: ${score}`);sendScore();startBtn.disabled=false;}
+function sendScore(){fetch('/submit-score',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({game:'TetrisCube',difficulty:diff,name:playerName,score})}).then(r=>r.json()).then(res=>{if(res.status==='ok')alert(`已上传！当前排名 ${res.rank}/${res.total}`);}).catch(console.error);} 
+// Mouse controls
+let pressTimer=null;BOARD_CANVAS.addEventListener('mousedown',()=>{pressTimer=setTimeout(()=>{drop();pressTimer=setInterval(drop,50);},200);});
+window.addEventListener('mouseup',()=>{clearTimeout(pressTimer);if(pressTimer&&typeof pressTimer!=='number'){// click rotate
+  const rotated=rotate(curPiece.shape);if(canMove(curX,curY,rotated))curPiece.shape=rotated;draw();}clearInterval(pressTimer);pressTimer=null;});
+// keyboard optional
+document.addEventListener('keydown',e=>{if(!running)return;switch(e.key){case 'ArrowLeft':if(canMove(curX-1,curY,curPiece.shape)){curX--;draw();}break;case 'ArrowRight':if(canMove(curX+1,curY,curPiece.shape)){curX++;draw();}break;case 'ArrowDown':drop();break;case 'ArrowUp':const r=rotate(curPiece.shape);if(canMove(curX,curY,r)){curPiece.shape=r;draw();}break;}});
+startBtn.addEventListener('click',startGame);
+</script>
+</body>
+</html>

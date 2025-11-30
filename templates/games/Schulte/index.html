@@ -1,0 +1,126 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>Schulte 方格训练</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      background-color: #f0f0f0;
+    }
+
+    h1 {
+      margin-top: 20px;
+    }
+
+    #status {
+      font-size: 24px;
+      margin: 10px;
+    }
+
+    #grid {
+      display: grid;
+      grid-template-columns: repeat(5, 60px);
+      grid-template-rows: repeat(5, 60px);
+      gap: 10px;
+      justify-content: center;
+      margin: 20px auto;
+    }
+
+    .cell {
+      background-color: #007BFF; /* 蓝色背景 */
+      color: white;               /* 白色文字 */
+      border: 2px solid #333;
+      font-size: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      user-select: none;
+      transition: background-color 0.2s;
+    }
+
+    #restart-btn {
+      padding: 10px 20px;
+      font-size: 16px;
+      margin-top: 10px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Schulte 方格训练</h1>
+  <div id="status">状态：未开始</div>
+  <div id="grid"></div>
+  <button id="restart-btn">重新开始</button>
+
+  <script>
+    const grid = document.getElementById('grid');
+    const statusDisplay = document.getElementById('status');
+    const restartBtn = document.getElementById('restart-btn');
+
+    let numbers = [];
+    let currentNumber = 1;
+    let startTime = null;
+
+    function shuffle(array) {
+      for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+      }
+      return array;
+    }
+
+    function updateStatus() {
+      if (currentNumber <= 25) {
+        statusDisplay.textContent = `状态：进行中 | 下一个数字：${currentNumber}`;
+      }
+    }
+
+    function startTimer() {
+      startTime = Date.now();
+      updateStatus();
+    }
+
+    function stopTimer() {
+      const elapsed = (Date.now() - startTime) / 1000;
+      statusDisplay.textContent = `状态：完成：${elapsed.toFixed(2)} 秒`;
+    }
+
+    function createGrid() {
+      grid.innerHTML = '';
+      numbers = shuffle([...Array(25).keys()].map(n => n + 1));
+      currentNumber = 1;
+      startTime = null;
+
+      numbers.forEach(num => {
+        const cell = document.createElement('div');
+        cell.classList.add('cell');
+        cell.textContent = num;
+        cell.addEventListener('click', () => handleClick(cell, num));
+        grid.appendChild(cell);
+      });
+
+      startTimer();
+    }
+
+    function handleClick(cell, num) {
+      if (num === currentNumber) {
+        cell.style.pointerEvents = 'none'; // 禁止重复点击
+        currentNumber++;
+        if (currentNumber > 25) {
+          stopTimer();
+        } else {
+          updateStatus();
+        }
+      }
+    }
+
+    restartBtn.addEventListener('click', createGrid);
+    window.addEventListener('load', createGrid);
+  </script>
+
+</body>
+</html>

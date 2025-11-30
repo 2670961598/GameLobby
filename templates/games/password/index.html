@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <title>密码破解游戏</title>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f0f0;
+            font-family: Arial, sans-serif;
+        }
+        .game-container {
+            display: flex;
+            gap: 40px;
+            align-items: flex-start;
+        }
+        .title {
+            font-size: 24px;
+            color: #8B4513;
+            margin-bottom: 30px;
+            text-align: center;
+            font-weight: bold;
+        }
+        .password-machine {
+            background-color: #8B4513;
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.3);
+        }
+        .display {
+            display: flex;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+        .digit-container {
+            text-align: center;
+        }
+        .arrow {
+            cursor: pointer;
+            font-size: 30px;
+            color: #fff;
+            user-select: none;
+            padding: 5px 15px;
+        }
+        .digit {
+            background-color: #fff;
+            padding: 15px 30px;
+            border-radius: 8px;
+            font-size: 36px;
+            margin: 10px 0;
+            min-width: 60px;
+            display: inline-block;
+        }
+        .submit-btn {
+            display: block;
+            margin: 30px auto 0;
+            padding: 15px 30px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 20px;
+        }
+        .submit-btn:hover {
+            background-color: #45a049;
+        }
+        .attempts {
+            text-align: center;
+            color: #fff;
+            margin-top: 15px;
+            font-size: 18px;
+        }
+        .history-panel {
+            background-color: #8B4513;
+            padding: 20px;
+            border-radius: 15px;
+            color: white;
+            min-width: 200px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.3);
+        }
+        .history-title {
+            font-size: 20px;
+            margin-bottom: 15px;
+            text-align: center;
+            font-weight: bold;
+        }
+        .history-list {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .history-item {
+            background-color: rgba(255, 255, 255, 0.1);
+            padding: 10px;
+            margin-bottom: 8px;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+        .success-message {
+            background-color: #4CAF50;
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            text-align: center;
+            display: none;
+        }
+        @keyframes flash {
+            0% { background-color: #fff; }
+            50% { background-color: #ff0000; }
+            100% { background-color: #fff; }
+        }
+        .flash {
+            animation: flash 0.5s 2;
+        }
+        .restart-btn {
+            display: none;
+            margin: 20px auto 0;
+            padding: 15px 30px;
+            background-color: #ff6b6b;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 20px;
+        }
+        .restart-btn:hover {
+            background-color: #ff5252;
+        }
+        .digit-container.disabled .arrow {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body>
+    <div class="title">请猜出密码，叶青鑫奖励你100万</div>
+    <div class="game-container">
+        <div class="password-machine">
+            <div class="display">
+                <div class="digit-container" id="digitContainer0">
+                    <div class="arrow" onclick="changeDigit(0, 1)">▲</div>
+                    <div class="digit" id="digit0">0</div>
+                    <div class="arrow" onclick="changeDigit(0, -1)">▼</div>
+                </div>
+                <div class="digit-container" id="digitContainer1">
+                    <div class="arrow" onclick="changeDigit(1, 1)">▲</div>
+                    <div class="digit" id="digit1">0</div>
+                    <div class="arrow" onclick="changeDigit(1, -1)">▼</div>
+                </div>
+                <div class="digit-container" id="digitContainer2">
+                    <div class="arrow" onclick="changeDigit(2, 1)">▲</div>
+                    <div class="digit" id="digit2">0</div>
+                    <div class="arrow" onclick="changeDigit(2, -1)">▼</div>
+                </div>
+                <div class="digit-container" id="digitContainer3">
+                    <div class="arrow" onclick="changeDigit(3, 1)">▲</div>
+                    <div class="digit" id="digit3">0</div>
+                    <div class="arrow" onclick="changeDigit(3, -1)">▼</div>
+                </div>
+            </div>
+            <button class="submit-btn" id="submitBtn" onclick="checkPassword()">确定</button>
+            <button class="restart-btn" id="restartBtn" onclick="resetGame()">重新开始</button>
+            <div class="attempts" id="attempts">尝试次数: 0</div>
+            <div class="success-message" id="successMessage"></div>
+        </div>
+        <div class="history-panel">
+            <div class="history-title">历史记录</div>
+            <div class="history-list" id="historyList"></div>
+        </div>
+    </div>
+
+    <script>
+        let password = [];
+        let attempts = 0;
+        let digits = [0, 0, 0, 0];
+
+        function generatePassword() {
+            password = [];
+            for (let i = 0; i < 4; i++) {
+                password.push(Math.floor(Math.random() * 10));
+            }
+        }
+
+        function changeDigit(index, delta) {
+            digits[index] = (digits[index] + delta + 10) % 10;
+            document.getElementById(`digit${index}`).textContent = digits[index];
+        }
+
+        function flashDigits() {
+            for (let i = 0; i < 4; i++) {
+                const digit = document.getElementById(`digit${i}`);
+                digit.classList.add('flash');
+                setTimeout(() => {
+                    digit.classList.remove('flash');
+                }, 1000);
+            }
+        }
+
+        function addHistoryItem(correctDigits, correctPositions) {
+            const historyList = document.getElementById('historyList');
+            const historyItem = document.createElement('div');
+            historyItem.className = 'history-item';
+            const currentNumbers = digits.map(num => `[${num}]`).join('');
+            historyItem.textContent = `${currentNumbers} ${correctPositions}个数字且位置正确 ${correctDigits}个仅数字正确`;
+            historyList.insertBefore(historyItem, historyList.firstChild);
+        }
+
+        function showSuccessMessage() {
+            const successMessage = document.getElementById('successMessage');
+            const submitBtn = document.getElementById('submitBtn');
+            const restartBtn = document.getElementById('restartBtn');
+            
+            successMessage.textContent = `恭喜你！密码破解成功！\n总共尝试了 ${attempts} 次`;
+            successMessage.style.display = 'block';
+            
+            // 禁用数字轮盘和确定按钮
+            submitBtn.style.display = 'none';
+            restartBtn.style.display = 'block';
+            for (let i = 0; i < 4; i++) {
+                document.getElementById(`digitContainer${i}`).classList.add('disabled');
+            }
+        }
+
+        function checkPassword() {
+            attempts++;
+            document.getElementById('attempts').textContent = `尝试次数: ${attempts}`;
+
+            let correctDigits = 0;
+            let correctPositions = 0;
+            let passwordCopy = [...password];
+
+            // 检查正确位置
+            for (let i = 0; i < 4; i++) {
+                if (digits[i] === password[i]) {
+                    correctPositions++;
+                    passwordCopy[i] = -1;
+                }
+            }
+
+            // 检查正确数字（不包括位置正确的）
+            for (let i = 0; i < 4; i++) {
+                if (digits[i] !== password[i]) {
+                    const index = passwordCopy.indexOf(digits[i]);
+                    if (index !== -1) {
+                        correctDigits++;
+                        passwordCopy[index] = -1;
+                    }
+                }
+            }
+
+            if (correctPositions === 4) {
+                showSuccessMessage();
+                resetGame();
+            } else {
+                addHistoryItem(correctDigits, correctPositions);
+                flashDigits();
+            }
+        }
+
+        function resetGame() {
+            generatePassword();
+            attempts = 0;
+            digits = [0, 0, 0, 0];
+            
+            // 重置界面
+            const submitBtn = document.getElementById('submitBtn');
+            const restartBtn = document.getElementById('restartBtn');
+            submitBtn.style.display = 'block';
+            restartBtn.style.display = 'none';
+            
+            for (let i = 0; i < 4; i++) {
+                document.getElementById(`digit${i}`).textContent = '0';
+                document.getElementById(`digitContainer${i}`).classList.remove('disabled');
+            }
+            
+            document.getElementById('attempts').textContent = '尝试次数: 0';
+            document.getElementById('historyList').innerHTML = '';
+            document.getElementById('successMessage').style.display = 'none';
+        }
+
+        // 初始化游戏
+        generatePassword();
+    </script>
+</body>
+</html> 

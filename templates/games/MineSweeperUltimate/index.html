@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Minesweeper Ultimate</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <header>
+    <h1>Minesweeper Ultimate</h1>
+    <div id="toolbar">
+      <label for="difficulty">Difficulty:</label>
+      <select id="difficulty">
+        <option value="easy">Easy 9×9 / 10</option>
+        <option value="medium">Medium 16×16 / 40</option>
+        <option value="hard">Hard 16×30 / 99</option>
+        <option value="custom">Custom…</option>
+      </select>
+      <span id="timer">00:00.00</span>
+      <button id="restart" title="Restart (F2)">Restart</button>
+    </div>
+  </header>
+
+  <main>
+    <div id="game-area">
+      <div id="board-container">
+        <div id="board" class="grid"></div>
+      </div>
+
+      <aside id="leaderboard">
+        <h2>Leaderboard</h2>
+        <div id="tabs">
+          <button data-tab="easy" class="active">Easy</button>
+          <button data-tab="medium">Medium</button>
+          <button data-tab="hard">Hard</button>
+        </div>
+        <ol id="score-list"></ol>
+      </aside>
+    </div>
+  </main>
+
+  <!-- Generic modal overlay -->
+  <div id="modal" class="hidden">
+    <div class="modal-content">
+      <h3 id="modal-title"></h3>
+      <div id="modal-body"></div>
+      <div id="modal-actions"></div>
+    </div>
+  </div>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html> 

@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>找不同颜色</title>
+    <style>
+        body {
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background-color: #f0f0f0;
+            font-family: Arial, sans-serif;
+        }
+        .game-container {
+            text-align: center;
+        }
+        .info {
+            margin-bottom: 20px;
+            font-size: 24px;
+        }
+        .grid-container {
+            display: grid;
+            gap: 2px;
+            background-color: #333;
+            padding: 2px;
+            border-radius: 4px;
+        }
+        .cell {
+            cursor: pointer;
+            transition: transform 0.1s;
+        }
+        .cell:hover {
+            transform: scale(0.95);
+        }
+        .score {
+            margin-top: 20px;
+            font-size: 20px;
+        }
+        .timer {
+            margin-top: 10px;
+            font-size: 20px;
+            color: #e74c3c;
+        }
+        .game-over {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255, 255, 255, 0.9);
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            display: none;
+        }
+        .restart-btn {
+            margin-top: 20px;
+            padding: 10px 20px;
+            font-size: 18px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .restart-btn:hover {
+            background-color: #2980b9;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <div class="info">找出不同颜色的方块</div>
+        <div id="grid-container" class="grid-container"></div>
+        <div class="score">得分: <span id="score">0</span></div>
+        <div class="timer">剩余时间: <span id="timer">30</span>秒</div>
+    </div>
+    <div id="game-over" class="game-over">
+        <h2>游戏结束!</h2>
+        <p>最终得分: <span id="final-score">0</span></p>
+        <button class="restart-btn" onclick="startGame()">重新开始</button>
+    </div>
+
+    <script>
+        let score = 0;
+        let n = 2;
+        let timeLeft = 30;
+        let timer;
+        let differentCellIndex;
+        let baseColor;
+        let differentColor;
+        let isGameRunning = false;
+
+        function startGame() {
+            score = 0;
+            n = 2;
+            timeLeft = 30;
+            document.getElementById('score').textContent = score;
+            document.getElementById('game-over').style.display = 'none';
+            isGameRunning = true;
+            createGrid();
+            startTimer();
+        }
+
+        function startTimer() {
+            if (timer) clearInterval(timer);
+            timer = setInterval(() => {
+                timeLeft--;
+                document.getElementById('timer').textContent = timeLeft;
+                if (timeLeft <= 0) {
+                    endGame();
+                }
+            }, 1000);
+        }
+
+        function endGame() {
+            isGameRunning = false;
+            clearInterval(timer);
+            document.getElementById('final-score').textContent = score;
+            document.getElementById('game-over').style.display = 'block';
+        }
+
+        function createGrid() {
+            const container = document.getElementById('grid-container');
+            container.style.gridTemplateColumns = `repeat(${n}, 1fr)`;
+            container.innerHTML = '';
+
+            // 生成基础颜色
+            baseColor = generateRandomColor();
+            // 生成差异颜色（差异度随n增加而减小）
+            const difference = Math.max(5, 50 - n * 2); // 差异度随n增加而减小
+            differentColor = generateSimilarColor(baseColor, difference);
+
+            // 随机选择不同颜色的方块位置
+            differentCellIndex = Math.floor(Math.random() * (n * n));
+
+            // 创建方块
+            for (let i = 0; i < n * n; i++) {
+                const cell = document.createElement('div');
+                cell.className = 'cell';
+                cell.style.backgroundColor = i === differentCellIndex ? differentColor : baseColor;
+                cell.style.width = `${400 / n}px`;
+                cell.style.height = `${400 / n}px`;
+                cell.onclick = () => handleCellClick(i);
+                container.appendChild(cell);
+            }
+        }
+
+        function handleCellClick(index) {
+            if (!isGameRunning) return;
+
+            if (index === differentCellIndex) {
+                // 正确点击
+                score++;
+                document.getElementById('score').textContent = score;
+                n++;
+                createGrid();
+            } else {
+                // 错误点击
+                timeLeft = Math.max(0, timeLeft - 5);
+                document.getElementById('timer').textContent = timeLeft;
+                if (timeLeft <= 0) {
+                    endGame();
+                }
+            }
+        }
+
+        function generateRandomColor() {
+            const r = Math.floor(Math.random() * 256);
+            const g = Math.floor(Math.random() * 256);
+            const b = Math.floor(Math.random() * 256);
+            return `rgb(${r}, ${g}, ${b})`;
+        }
+
+        function generateSimilarColor(baseColor, difference) {
+            // 解析基础颜色
+            const rgb = baseColor.match(/\d+/g);
+            const r = parseInt(rgb[0]);
+            const g = parseInt(rgb[1]);
+            const b = parseInt(rgb[2]);
+
+            // 随机选择一个通道进行修改
+            const channel = Math.floor(Math.random() * 3);
+            const newRgb = [r, g, b];
+            newRgb[channel] = Math.max(0, Math.min(255, newRgb[channel] + (Math.random() > 0.5 ? difference : -difference)));
+
+            return `rgb(${newRgb[0]}, ${newRgb[1]}, ${newRgb[2]})`;
+        }
+
+        // 开始游戏
+        startGame();
+    </script>
+</body>
+</html> 

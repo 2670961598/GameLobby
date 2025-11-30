@@ -1,0 +1,289 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    background-color: #f0f0f0;
+    font-family: Arial, sans-serif;
+}
+
+.screen {
+    position: relative;
+    width: 800px;
+    height: 600px;
+    background-color: white;
+    border-radius: 10px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+.hidden {
+    display: none !important;
+}
+
+#startScreen {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+#startButton {
+    padding: 15px 30px;
+    font-size: 24px;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+#startButton:hover {
+    background-color: #45a049;
+}
+
+#characters {
+    position: absolute;
+    top: 20px;
+    width: 100%;
+    display: flex;
+    justify-content: space-around;
+}
+
+.character {
+    position: relative;
+    width: 100px;
+    height: 100px;
+}
+
+.character img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+.speech-bubble {
+    position: absolute;
+    top: -120px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 240px;
+    height: 120px;
+}
+
+.speech-bubble img {
+    width: 100%;
+    height: 100%;
+}
+
+.speech-text {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: black;
+    font-size: 16px;
+    text-align: center;
+    width: 100%;
+}
+
+#bomb-container {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+}
+
+#timer {
+    position: absolute;
+    top: 39%;
+    left: 42%;
+    transform: translate(-50%, -50%);
+    font-size: 18px;
+    color: red;
+    font-weight: bold;
+}
+
+#bomb {
+    width: 200px;
+    height: 200px;
+    object-fit: contain;
+}
+
+#wires {
+    position: relative;
+    height: 100px;
+}
+
+.wire {
+    position: absolute;
+    width: 10px;
+    height: 100px;
+    cursor: pointer;
+}
+
+#red-wire {
+    left: 40%;
+    background-color: red;
+}
+
+#blue-wire {
+    right: 40%;
+    background-color: blue;
+}
+
+#yellow-wire {
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: yellow;
+}
+
+#explosion {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 100;
+}
+
+#explosion img {
+    width: 300px;
+    height: 300px;
+    object-fit: contain;
+    animation: explode 0.5s infinite alternate;
+}
+
+@keyframes explode {
+    from {
+        transform: scale(1);
+    }
+    to {
+        transform: scale(1.2);
+    }
+}
+
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.modal-content {
+    background-color: white;
+    padding: 20px;
+    border-radius: 10px;
+    text-align: center;
+}
+
+#restartButton {
+    margin-top: 20px;
+    padding: 10px 20px;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+#restartButton:hover {
+    background-color: #45a049;
+}
+
+#failModal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+#failModal .modal-content {
+    background-color: white;
+    padding: 20px;
+    border-radius: 10px;
+    text-align: center;
+}
+
+#failModal h2 {
+    color: #ff0000;
+    margin-bottom: 20px;
+}
+
+#failModal button {
+    margin-top: 20px;
+    padding: 10px 20px;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+#failModal button:hover {
+    background-color: #45a049;
+}
+
+.connection-lines {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 1;
+    overflow: visible;
+}
+
+.connection-line {
+    stroke: black;
+    stroke-width: 2;
+}
+
+#game-tip {
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 20px;
+    color: #333;
+    font-weight: bold;
+    text-align: center;
+    padding: 10px 20px;
+    background-color: rgba(255, 255, 255, 0.8);
+    border-radius: 5px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+#game-title {
+    position: absolute;
+    top: -40px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 24px;
+    color: #4CAF50;
+    font-weight: bold;
+    text-align: center;
+    padding: 10px 20px;
+    background-color: rgba(255, 255, 255, 0.8);
+    border-radius: 5px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    z-index: 2;
+} 

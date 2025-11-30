@@ -1,0 +1,613 @@
+/* CSS 变量定义 - 统一管理游戏颜色和常量 */
+:root {
+    /* 主题色彩 */
+    --role1: #AFE59B;  /* 玩家绿色 */
+    --role2: #7B75D3;  /* AI紫色 */
+    --role3: #E37A80;  /* AI红色 */
+    --buff-color: #FFD700;  /* Buff金色 */
+    
+    /* UI颜色 */
+    --bg-dark: #1a1a2e;
+    --bg-darker: #16213e;
+    --text-light: #ffffff;
+    --text-secondary: #cccccc;
+    --border-color: rgba(255, 255, 255, 0.2);
+    
+    /* 游戏常量 */
+    --game-width: 600px;
+    --game-height: 600px;
+    --grid-size: 10px;
+    --character-size: 24px;
+    --bullet-size: 10px;
+    --buff-size: 30px;
+    --track-width: 15px;
+    
+    /* 动画时长 */
+    --hit-duration: 0.2s;
+    --pulse-duration: 1.5s;
+    --transition-duration: 0.3s;
+}
+
+/* 主容器和分层系统 */
+#game-container {
+    position: relative;
+    width: var(--game-width);
+    height: var(--game-height);
+    margin: 0 auto;
+    background: linear-gradient(135deg, var(--bg-dark) 0%, var(--bg-darker) 100%);
+    overflow: hidden;
+    box-shadow: 0 0 30px rgba(0, 0, 0, 0.8);
+}
+
+/* 背景画布层 - Z-index: 1 */
+#ground {
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 1;
+    background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+}
+
+/* 游戏实体层 - Z-index: 2 */
+#game-layer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 2;
+    pointer-events: none; /* 让点击事件穿透到下层 */
+}
+
+/* HUD界面层 - Z-index: 3 */
+#hud {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 3;
+    pointer-events: none; /* 除了控制按钮外，其他不阻挡游戏操作 */
+}
+
+/* 界面屏幕层 - Z-index: 4 */
+.screen {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 4;
+    background: rgba(26, 26, 46, 0.95);
+    backdrop-filter: blur(10px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    visibility: hidden;
+    transition: all var(--transition-duration) ease;
+}
+
+.screen.active {
+    opacity: 1;
+    visibility: visible;
+}
+
+/* 角色样式 */
+.character {
+    position: absolute;
+    width: var(--character-size);
+    height: var(--character-size);
+    pointer-events: none;
+    transition: transform 0.1s ease;
+}
+
+.character-body {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    position: relative;
+    box-shadow: 0 0 10px currentColor;
+}
+
+/* 玩家角色（绿色圆形） */
+.player .character-body {
+    background: var(--role1);
+    color: var(--role1);
+}
+
+/* AI角色（三角形） */
+.ai .character-body {
+    border-radius: 0;
+    background: transparent;
+    overflow: hidden;
+}
+
+.ai.role2 .character-body {
+    color: var(--role2);
+}
+
+.ai.role3 .character-body {
+    color: var(--role3);
+}
+
+/* 用伪元素创建三角形 */
+.ai .character-body::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 0;
+    height: 0;
+    border-style: solid;
+    border-width: 0 8px 16px 8px;
+    border-color: transparent transparent currentColor transparent;
+    filter: drop-shadow(0 0 6px currentColor);
+}
+
+/* 无敌状态效果 */
+.invincible-effect {
+    position: absolute;
+    top: -6px;
+    left: -6px;
+    right: -6px;
+    bottom: -6px;
+    border: 2px solid var(--buff-color);
+    border-radius: 50%;
+    opacity: 0;
+    animation: invincible-pulse var(--pulse-duration) ease-in-out infinite;
+}
+
+.character.invincible .invincible-effect {
+    opacity: 1;
+}
+
+/* Buff状态效果 */
+.buff-effect {
+    position: absolute;
+    top: -8px;
+    left: -8px;
+    right: -8px;
+    bottom: -8px;
+    border: 2px solid var(--buff-color);
+    border-radius: 50%;
+    opacity: 0;
+    animation: buff-pulse calc(var(--pulse-duration) * 0.8) ease-in-out infinite;
+}
+
+.character.buffed .buff-effect {
+    opacity: 1;
+}
+
+/* 受击闪烁效果 */
+.character.hit {
+    animation: hit-flash var(--hit-duration) ease alternate 3;
+}
+
+/* 子弹样式 */
+.bullet {
+    position: absolute;
+    width: var(--bullet-size);
+    height: var(--bullet-size);
+    border-radius: 50%;
+    pointer-events: none;
+    box-shadow: 0 0 6px currentColor;
+}
+
+.bullet.role1 {
+    background: var(--role1);
+    color: var(--role1);
+}
+
+.bullet.role2 {
+    background: var(--role2);
+    color: var(--role2);
+}
+
+.bullet.role3 {
+    background: var(--role3);
+    color: var(--role3);
+}
+
+/* Buff样式 */
+.buff {
+    position: absolute;
+    width: var(--buff-size);
+    height: var(--buff-size);
+    border-radius: 50%;
+    background: radial-gradient(circle, var(--buff-color) 0%, rgba(255, 215, 0, 0.6) 100%);
+    pointer-events: none;
+    animation: buff-idle var(--pulse-duration) ease-in-out infinite;
+}
+
+.buff-glow {
+    position: absolute;
+    top: -4px;
+    left: -4px;
+    right: -4px;
+    bottom: -4px;
+    border-radius: 50%;
+    background: radial-gradient(circle, transparent 40%, var(--buff-color) 100%);
+    opacity: 0.3;
+    animation: buff-glow calc(var(--pulse-duration) * 1.2) ease-in-out infinite reverse;
+}
+
+/* HUD样式 */
+#top-bar {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    right: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    pointer-events: none;
+}
+
+#timer {
+    font-size: 36px;
+    font-weight: bold;
+    color: var(--text-light);
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+    transition: all var(--transition-duration) ease;
+}
+
+/* 最后10秒的紧张效果 */
+body.panic #timer {
+    color: #ff4444;
+    animation: timer-panic 1s ease-in-out infinite;
+}
+
+body.panic #game-container {
+    animation: screen-panic 2s ease-in-out infinite;
+}
+
+#scores {
+    display: flex;
+    gap: 15px;
+}
+
+.score {
+    font-size: 24px;
+    font-weight: bold;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+.score-green {
+    color: var(--role1);
+}
+
+.score-purple {
+    color: var(--role2);
+}
+
+.score-red {
+    color: var(--role3);
+}
+
+/* 玩家血条 */
+#player-hud {
+    position: absolute;
+    bottom: 120px;
+    left: 20px;
+    right: 20px;
+    pointer-events: none;
+}
+
+#health-bar {
+    width: 100%;
+    height: 8px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+    overflow: hidden;
+    border: 1px solid var(--border-color);
+}
+
+#health-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #ff4444 0%, #ffaa44 50%, #44ff44 100%);
+    border-radius: 3px;
+    transition: width 0.3s ease, background-color 0.3s ease;
+    width: 100%;
+}
+
+/* 移动端控制 */
+#mobile-controls {
+    position: absolute;
+    bottom: 20px;
+    left: 20px;
+    right: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    pointer-events: auto;
+}
+
+/* 摇杆标签 */
+#mobile-controls::before {
+    content: "移动";
+    position: absolute;
+    bottom: 90px;
+    left: 25px;
+    color: var(--role1);
+    font-size: 12px;
+    font-weight: bold;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+#mobile-controls::after {
+    content: "射击";
+    position: absolute;
+    bottom: 90px;
+    right: 25px;
+    color: #ff6b6b;
+    font-size: 12px;
+    font-weight: bold;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+/* 移动摇杆 */
+#move-joystick {
+    width: 80px;
+    height: 80px;
+    border: 2px solid var(--border-color);
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.1);
+    position: relative;
+    backdrop-filter: blur(5px);
+}
+
+#move-joystick-knob {
+    width: 30px;
+    height: 30px;
+    background: var(--role1);
+    border-radius: 50%;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    transition: all 0.1s ease;
+    box-shadow: 0 0 10px rgba(175, 229, 155, 0.5);
+}
+
+/* 射击摇杆 */
+#fire-joystick {
+    width: 80px;
+    height: 80px;
+    border: 2px solid #ff6b6b;
+    border-radius: 50%;
+    background: rgba(255, 107, 107, 0.1);
+    position: relative;
+    backdrop-filter: blur(5px);
+}
+
+#fire-joystick-knob {
+    width: 30px;
+    height: 30px;
+    background: #ff6b6b;
+    border-radius: 50%;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    transition: all 0.1s ease;
+    box-shadow: 0 0 10px rgba(255, 107, 107, 0.5);
+}
+
+/* 摇杆激活状态 */
+#fire-joystick.active {
+    border-color: #ff4757;
+    background: rgba(255, 71, 87, 0.2);
+}
+
+#fire-joystick.active #fire-joystick-knob {
+    background: #ff4757;
+    box-shadow: 0 0 15px rgba(255, 71, 87, 0.8);
+}
+
+/* 屏幕界面样式 */
+.screen-content {
+    text-align: center;
+    max-width: 600px;
+    padding: 40px;
+}
+
+.screen-content h1 {
+    font-size: 48px;
+    font-weight: bold;
+    color: var(--role1);
+    text-shadow: 0 0 20px rgba(175, 229, 155, 0.5);
+    margin-bottom: 30px;
+}
+
+.rules {
+    font-size: 24px;
+    color: var(--text-secondary);
+    line-height: 1.5;
+    margin-bottom: 40px;
+}
+
+.game-button {
+    padding: 15px 40px;
+    font-size: 20px;
+    font-weight: bold;
+    border-radius: 30px;
+    background: linear-gradient(135deg, var(--role1) 0%, rgba(175, 229, 155, 0.8) 100%);
+    color: var(--bg-dark);
+    box-shadow: 0 4px 15px rgba(175, 229, 155, 0.3);
+    transition: all var(--transition-duration) ease;
+    pointer-events: auto;
+}
+
+.game-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(175, 229, 155, 0.4);
+}
+
+.game-button:active {
+    transform: translateY(0);
+}
+
+.game-button.secondary {
+    background: linear-gradient(135deg, var(--text-secondary) 0%, rgba(204, 204, 204, 0.8) 100%);
+    box-shadow: 0 4px 15px rgba(204, 204, 204, 0.3);
+}
+
+.buttons {
+    display: flex;
+    gap: 20px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+/* 结束界面特殊样式 */
+#final-scores {
+    margin: 30px 0;
+}
+
+.final-score {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 20px;
+    margin: 5px 0;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    font-size: 20px;
+}
+
+.color-name {
+    font-weight: bold;
+}
+
+.final-score:nth-child(1) .color-name,
+.final-score:nth-child(1) .color-percent {
+    color: var(--role1);
+}
+
+.final-score:nth-child(2) .color-name,
+.final-score:nth-child(2) .color-percent {
+    color: var(--role2);
+}
+
+.final-score:nth-child(3) .color-name,
+.final-score:nth-child(3) .color-percent {
+    color: var(--role3);
+}
+
+/* 性能警告 */
+#performance-warning {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 5;
+    background: rgba(255, 68, 68, 0.9);
+    color: white;
+    padding: 10px 20px;
+    border-radius: 5px;
+    font-weight: bold;
+    pointer-events: none;
+}
+
+/* 工具类 */
+.hidden {
+    display: none !important;
+}
+
+.mobile-only {
+    display: none;
+}
+
+/* 移动端媒体查询 */
+@media (max-width: 768px), (pointer: coarse) {
+    .mobile-only {
+        display: flex;
+    }
+    
+    #game-container {
+        width: 100vmin;
+        height: 100vmin;
+        max-width: 600px;
+        max-height: 600px;
+        margin: 0 auto;
+    }
+    
+    #ground {
+        width: 100%;
+        height: 100%;
+    }
+}
+
+/* 关键帧动画 */
+@keyframes invincible-pulse {
+    0%, 100% {
+        opacity: 0.3;
+        transform: scale(1);
+    }
+    50% {
+        opacity: 0.8;
+        transform: scale(1.1);
+    }
+}
+
+@keyframes buff-pulse {
+    0%, 100% {
+        opacity: 0.4;
+        transform: scale(1);
+    }
+    50% {
+        opacity: 0.9;
+        transform: scale(1.15);
+    }
+}
+
+@keyframes hit-flash {
+    0% {
+        filter: brightness(1);
+    }
+    100% {
+        filter: brightness(2) contrast(1.5);
+    }
+}
+
+@keyframes buff-idle {
+    0%, 100% {
+        transform: scale(1);
+        opacity: 0.8;
+    }
+    50% {
+        transform: scale(1.1);
+        opacity: 1;
+    }
+}
+
+@keyframes buff-glow {
+    0%, 100% {
+        opacity: 0.2;
+        transform: scale(1);
+    }
+    50% {
+        opacity: 0.5;
+        transform: scale(1.2);
+    }
+}
+
+@keyframes timer-panic {
+    0%, 100% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.1);
+    }
+}
+
+@keyframes screen-panic {
+    0%, 100% {
+        box-shadow: 0 0 30px rgba(0, 0, 0, 0.8);
+    }
+    50% {
+        box-shadow: 0 0 30px rgba(255, 68, 68, 0.3), inset 0 0 20px rgba(255, 68, 68, 0.1);
+    }
+} 

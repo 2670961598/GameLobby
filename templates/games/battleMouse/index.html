@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>打地鼠</title>
+    <style>
+        body{font-family:Arial,Helvetica,sans-serif;display:flex;flex-direction:column;align-items:center;background:#f5f5f5;margin:0}
+        h1{margin:20px 0 10px}
+        #options{margin-bottom:10px}
+        #grid{display:grid;grid-template-columns:repeat(3,90px);grid-gap:10px;margin-top:10px}
+        .hole{width:90px;height:90px;border-radius:50%;background:#7f8c8d;position:relative;cursor:pointer;}
+        .hole.active{background:#27ae60}
+        #score,#timer{font-size:18px;font-weight:bold;margin-top:6px}
+        button.btn{margin-top:10px;padding:8px 18px;font-size:16px;cursor:pointer}
+        a.back{margin-top:10px;padding:6px 16px;background:#3498db;color:#fff;border-radius:4px;text-decoration:none;display:inline-block}
+    </style>
+</head>
+<body>
+    <h1>打地鼠</h1>
+    <div id="options">
+        难度：
+        <label><input type="radio" name="diff" value="easy" checked> 简单</label>
+        <label><input type="radio" name="diff" value="medium"> 中等</label>
+        <label><input type="radio" name="diff" value="hard"> 困难</label>
+    </div>
+    <div id="timer">时间: 30s</div>
+    <div id="score">分数: 0</div>
+    <div id="grid"></div>
+    <button id="btn-start" class="btn">开始游戏</button>
+    <a href="/" class="back">返回列表</a>
+
+<script>
+const gridEl = document.getElementById('grid');
+const timerEl = document.getElementById('timer');
+const scoreEl = document.getElementById('score');
+const startBtn = document.getElementById('btn-start');
+
+const DIFF_CFG = {
+    easy:   {spawn: 1200, visible: 1000},
+    medium: {spawn: 800, visible: 700},
+    hard:   {spawn: 500, visible: 400}
+};
+
+const timeLimit = 30; // seconds
+let timeLeft = timeLimit;
+let timerId = null;
+let spawnId = null;
+let score = 0;
+let running = false;
+let playerName = '';
+let currentDiff = 'easy';
+
+function createGrid() {
+    gridEl.innerHTML='';
+    for(let i=0;i<9;i++){
+        const div=document.createElement('div');
+        div.className='hole';
+        div.addEventListener('click',()=>onHoleClick(div));
+        gridEl.appendChild(div);
+    }
+}
+
+function onHoleClick(div){
+    if(!running) return;
+    if(div.classList.contains('active')){
+        score+=1;
+        div.classList.remove('active');
+    }else{
+        score=Math.max(0,score-1);
+    }
+    updateUI();
+}
+
+function updateUI(){
+    scoreEl.textContent=`分数: ${score}`;
+    timerEl.textContent=`时间: ${timeLeft}s`;
+}
+
+function startTimer(){
+    timerId=setInterval(()=>{
+        timeLeft-=1;
+        timerEl.textContent=`时间: ${timeLeft}s`;
+        if(timeLeft<=0){
+            endGame();
+        }
+    },1000);
+}
+
+function spawnMole(){
+    const holes=[...gridEl.querySelectorAll('.hole')];
+    holes.forEach(h=>h.classList.remove('active'));
+    const idx=Math.floor(Math.random()*holes.length);
+    const hole=holes[idx];
+    hole.classList.add('active');
+    setTimeout(()=>hole.classList.remove('active'),DIFF_CFG[currentDiff].visible);
+}
+
+function startSpawn(){
+    spawnMole();
+    spawnId=setInterval(spawnMole,DIFF_CFG[currentDiff].spawn);
+}
+
+function startGame(){
+    if(running) return;
+    playerName=prompt('请输入姓名：',playerName||'');
+    if(!playerName) return;
+    currentDiff=document.querySelector('input[name="diff"]:checked').value;
+    score=0;
+    timeLeft=timeLimit;
+    updateUI();
+    running=true;
+    startBtn.disabled=true;
+    startTimer();
+    startSpawn();
+}
+
+function endGame(){
+    running=false;
+    clearInterval(timerId);
+    clearInterval(spawnId);
+    gridEl.querySelectorAll('.hole').forEach(h=>h.classList.remove('active'));
+    alert(`游戏结束！\n最终得分: ${score}`);
+    sendScore();
+    startBtn.disabled=false;
+}
+
+function sendScore(){
+    fetch('/submit-score',{
+        method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({game:'battleMouse',difficulty:currentDiff,name:playerName,score:score})
+    }).then(r=>r.json()).then(res=>{
+        if(res.status==='ok'){
+            alert(`已上传！当前排位 ${res.rank}/${res.total}`);
+        }
+    }).catch(console.error);
+}
+
+createGrid();
+startBtn.addEventListener('click',startGame);
+</script>
+</body>
+</html>

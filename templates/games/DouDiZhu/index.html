@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"/>
+<title>斗地主联机</title>
+<style>
+ body{margin:0;background:#f0f0f0;font-family:Arial,Helvetica,sans-serif;display:flex;flex-direction:column;align-items:center;}
+ h1{margin:20px 10px;}
+ #status{margin:6px;font-weight:bold;color:#333;}
+ #ready{padding:6px 16px;margin:6px;border:none;border-radius:4px;background:#3498db;color:#fff;cursor:pointer;}
+ #ready[disabled]{background:#95a5a6;cursor:default;}
+ #table{width:800px;height:500px;position:relative;background:#4CAF50;padding:10px;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,.15);}
+ #opponent{position:absolute;top:10px;left:50%;transform:translateX(-50%);color:#fff;font-size:18px;}
+ #lastPlay{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);min-width:160px;min-height:60px;background:rgba(255,255,255,.8);border-radius:6px;padding:4px;text-align:center;}
+ #hand{position:absolute;bottom:10px;left:50%;transform:translateX(-50%);display:flex;}
+ .card{width:45px;height:60px;border:1px solid #333;background:#fff;border-radius:4px;text-align:center;line-height:60px;font-weight:bold;margin-left:-32px;cursor:pointer;user-select:none;}
+ .card:first-child{margin-left:0;}
+ .card.selected{transform:translateY(-20px);}
+ #controls{margin-top:8px;}
+ #controls button{padding:6px 14px;margin:0 6px;border:none;border-radius:4px;background:#e67e22;color:#fff;cursor:pointer;}
+ #controls button[disabled]{background:#bdc3c7;cursor:default;}
+</style>
+</head>
+<body>
+<h1>斗地主</h1>
+<div id="status">连接中...</div>
+<button id="ready" style="display:none;">准备</button>
+<div id="table">
+  <div id="opponent">对手手牌: <span id="oppCount">27</span> 张</div>
+  <div id="lastPlay"></div>
+  <div id="hand"></div>
+</div>
+<div id="controls" style="display:none;">
+  <button id="playBtn" disabled>出牌</button>
+  <button id="passBtn" disabled>不要</button>
+</div>
+
+<script src="/static/libs/socket.io.min.js"></script>
+<script>
+// ---------- 基本数据 ----------
+const RANK_ORDER=['3','4','5','6','7','8','9','10','J','Q','K','A','2','SJ','BJ'];
+function rankValue(r){return RANK_ORDER.indexOf(r);} // 0-14
+function buildDeck(){
+  const deck=[];
+  for(let r of RANK_ORDER){
+    if(r==='SJ'||r==='BJ') deck.push(r);
+    else for(let i=0;i<4;i++) deck.push(r);
+  }
+  return deck;
+}
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+
+// ---------- UI ----------
+const statusEl=document.getElementById('status');
+const readyBtn=document.getElementById('ready');
+const table=document.getElementById('table');
+const handDiv=document.getElementById('hand');
+const playBtn=document.getElementById('playBtn');
+const passBtn=document.getElementById('passBtn');
+const controls=document.getElementById('controls');
+const oppCountEl=document.getElementById('oppCount');
+const lastPlayDiv=document.getElementById('lastPlay');
+
+let hand=[],selected=[],opponentCount=27,role='spectator',started=false,turn=0; // 0 none,1 host,2 client
+let lastMove=null; // {cards,type,rank}
+
+function renderHand(){
+  handDiv.innerHTML='';
+  hand.sort((a,b)=>rankValue(a)-rankValue(b));
+  hand.forEach((card,i)=>{
+    const d=document.createElement('div');d.className='card';d.textContent=card;d.dataset.card=card;
+    if(selected.includes(card+'_'+i)) d.classList.add('selected');
+    d.addEventListener('click',()=>{
+      const key=card+'_'+i;
+      if(selected.includes(key)) selected=selected.filter(k=>k!==key);
+      else selected.push(key);
+      renderHand();
+      playBtn.disabled=!canPlaySelected();
+    });
+    handDiv.appendChild(d);
+  });
+}
+function renderLastMove(){
+  if(!lastMove){lastPlayDiv.textContent='';return;}
+  lastPlayDiv.textContent=lastMove.cards.join(' ');
+}
+
+// ---------- 规则判断 ----------
+function classify(cards){
+  // cards array of ranks e.g. ['3','3','3']
+  if(cards.length===0) return null;
+  // rocket
+  if(cards.length===2 && cards.includes('SJ') && cards.includes('BJ')) return {type:'rocket',rank:17};
+  // count map
+  const cnt={};cards.forEach(r=>cnt[r]=(cnt[r]||0)+1);
+  const counts=Object.values(cnt);
+  const ranks=Object.keys(cnt);
+  const max=Math.max(...counts);
+  // bomb
+  if(max===4 && cards.length===4) return {type:'bomb',rank:rankValue(ranks.find(r=>cnt[r]===4))};
+  if(cards.length===1) return {type:'single',rank:rankValue(cards[0])};
+  if(cards.length===2 && max===2) return {type:'pair',rank:rankValue(ranks.find(r=>cnt[r]===2))};
+  if(cards.length===3 && max===3) return {type:'triple',rank:rankValue(ranks.find(r=>cnt[r]===3))};
+  if(cards.length===4 && max===3) return {type:'3+1',rank:rankValue(ranks.find(r=>cnt[r]===3))};
+  if(cards.length===5 && max===3 && counts.includes(2)) return {type:'3+2',rank:rankValue(ranks.find(r=>cnt[r]===3))};
+  // straight ≥5, no 2/jokers
+  if(cards.length>=5 && counts.every(c=>c===1)){
+    const vs=cards.map(rankValue).sort((a,b)=>a-b);
+    if(vs.some(v=>v>=12)) return null; // 2,SJ,BJ not allowed in straight
+    for(let i=1;i<vs.length;i++) if(vs[i]!==vs[i-1]+1) return null;
+    return {type:'straight',rank:vs[vs.length-1],len:cards.length};
+  }
+  return null; // unsupported pattern
+}
+function compareMove(moveA,moveB){
+  // return true if moveA beats moveB (moveB may be null)
+  if(!moveB) return true;
+  if(moveA.type==='rocket') return true;
+  if(moveB.type==='rocket') return false;
+  if(moveA.type==='bomb' && moveB.type!=='bomb') return true;
+  if(moveB.type==='bomb' && moveA.type!=='bomb') return false;
+  if(moveA.type!==moveB.type) return false;
+  if(moveA.type==='straight' && moveA.len!==moveB.len) return false;
+  return moveA.rank>moveB.rank;
+}
+
+function canPlaySelected(){
+  const cards=getSelectedCards();
+  const cls=classify(cards);
+  if(!cls) return false;
+  return compareMove(cls,lastMove);
+}
+function getSelectedCards(){
+  return selected.map(k=>k.split('_')[0]);
+}
+
+// ---------- Socket ----------
+const params=new URLSearchParams(location.search);
+const ROOM=params.get('room')||Math.random().toString(36).slice(2,8);
+const GAME_ID='DouDiZhu';
+const socket=io('/signal',{transports:['websocket']});
+
+socket.on('connect',()=>{socket.emit('join',{game:GAME_ID,room:ROOM});});
+
+socket.on('role',data=>{
+  role=data.role==='host'?'host':(data.role==='client'?'player':'spectator');
+  if(role==='spectator'){statusEl.textContent='仅观战模式';return;}
+  readyBtn.style.display='inline-block';
+  readyBtn.disabled=false;
+  controls.style.display='block';
+  statusEl.textContent='请点击准备';
+});
+
+socket.on('player_count',d=>{if(d.players!=null) opponentCount=d.players-1;});
+
+socket.on('signal',data=>{
+  switch(data.type){
+    case 'ready':
+      if(data.who!=='host') break;
+      break;
+    case 'start':
+      started=true;turn=1; // host先
+      hand=data.hand;opponentCount=27;
+      oppCountEl.textContent=opponentCount;
+      renderHand();statusEl.textContent='游戏开始，等待地主出牌';
+      break;
+    case 'move':
+      lastMove=data.move;renderLastMove();
+      if(data.from===role){ // 自己
+        // remove played cards
+        data.move.cards.forEach(c=>{const idx=hand.indexOf(c);if(idx>-1)hand.splice(idx,1);} );
+        renderHand();selected=[];
+      }else{
+        opponentCount-=data.move.cards.length;oppCountEl.textContent=opponentCount;
+      }
+      if(hand.length===0){statusEl.textContent='你赢了!';return;}
+      if(opponentCount===0){statusEl.textContent='你输了!';return;}
+      turn=3-turn;updateTurnUI();
+      break;
+    case 'pass':
+      if(data.from!==role){lastMove=null;renderLastMove();}
+      turn=3-turn;updateTurnUI();
+      break;
+  }
+});
+
+function updateTurnUI(){
+  const myTurn=(role==='host'&&turn===1)||(role==='player'&&turn===2);
+  playBtn.disabled=!myTurn;
+  passBtn.disabled=!myTurn;
+  statusEl.textContent=myTurn?'轮到你出牌':'等待对手出牌';
+}
+
+readyBtn.addEventListener('click',()=>{
+  readyBtn.disabled=true;socket.emit('signal',{game:GAME_ID,type:'ready',who:role});
+  if(role==='host') startGame(); // host 立即开始
+});
+
+function startGame(){
+  // Host shuffle & deal
+  const deck=shuffle(buildDeck());
+  hand=deck.slice(0,27);
+  const clientHand=deck.slice(27);
+  renderHand();
+  started=true;turn=1;
+  statusEl.textContent='游戏开始，轮到你出牌';
+  // 发送给对手其手牌（不含自已）
+  socket.emit('signal',{game:GAME_ID,type:'start',hand:clientHand});
+  updateTurnUI();
+}
+
+playBtn.addEventListener('click',()=>{
+  if(playBtn.disabled) return;
+  const cards=getSelectedCards();
+  const cls=classify(cards);
+  if(!cls){alert('牌型不合法');return;}
+  if(!compareMove(cls,lastMove)){alert('无法压前一手');return;}
+  lastMove=cls;lastMove.cards=cards.slice();renderLastMove();
+  // remove from hand
+  selected.forEach(k=>{const c=k.split('_')[0];const idx=hand.indexOf(c);if(idx>-1)hand.splice(idx,1);});
+  selected=[];renderHand();
+  socket.emit('signal',{game:GAME_ID,type:'move',move:cls,from:role});
+  if(hand.length===0){statusEl.textContent='你赢了!';socket.emit('signal',{game:GAME_ID,type:'win'});return;}
+  turn=3-turn;updateTurnUI();
+});
+
+passBtn.addEventListener('click',()=>{
+  if(passBtn.disabled) return;
+  socket.emit('signal',{game:GAME_ID,type:'pass',from:role});
+  lastMove=null;renderLastMove();
+  turn=3-turn;updateTurnUI();
+});
+</script>
+</body>
+</html> 

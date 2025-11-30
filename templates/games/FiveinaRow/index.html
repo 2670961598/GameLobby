@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8" />
+    <title>五子棋联机</title>
+    <style>
+        body{margin:0;background:#f0f0f0;font-family:Arial,Helvetica,sans-serif;display:flex;flex-direction:column;align-items:center;}
+        h1{margin:20px 0;}
+        #status{margin:6px 6px;font-weight:bold;color:#333;}
+        #spectator{color:#666;margin-bottom:6px;}
+        #ready{padding:6px 16px;margin-bottom:6px;border:none;border-radius:4px;background:#3498db;color:#fff;cursor:pointer;}
+        #ready[disabled]{background:#95a5a6;cursor:default;}
+        canvas{background:#d8a45a;box-shadow:0 2px 8px rgba(0,0,0,.2);cursor:pointer;}
+    </style>
+</head>
+<body>
+    <h1>五子棋</h1>
+    <div id="status">连接中...</div>
+    <button id="ready" style="display:none;">准备</button>
+    <div id="spectator" style="display:none;">观战人数: <span id="specNum">0</span></div>
+    <div style="display:flex;gap:20px;align-items:flex-start;">
+        <!-- 玩家列表 -->
+        <div id="playerList" style="width:180px;min-height:300px;background:#fff;border:1px solid #ccc;padding:6px;font-size:14px;"></div>
+
+        <div id="boardCol" style="display:flex;flex-direction:column;align-items:center;">
+            <div id="hostInfo" style="min-height:24px;font-weight:bold;margin-bottom:4px;color:#2c3e50; display:none;"></div>
+
+            <button id="sitTop" style="display:none;padding:4px 10px;margin-bottom:4px;background:#e67e22;color:#fff;border:none;border-radius:4px;">黑方坐下</button>
+            <button id="leaveSeat" style="display:none;padding:4px 10px;margin-bottom:4px;background:#7f8c8d;color:#fff;border:none;border-radius:4px;">离开座位</button>
+            <canvas id="board" width="600" height="600"></canvas>
+
+            <button id="sitBottom" style="display:none;padding:4px 10px;margin-top:4px;background:#e67e22;color:#fff;border:none;border-radius:4px;">白方坐下</button>
+            <div id="playerInfo" style="min-height:24px;font-weight:bold;margin-top:4px;color:#2c3e50; display:none;"></div>
+        </div>
+        <div id="chat" style="width:260px;display:flex;flex-direction:column;">
+            <!-- 聊天框上方空位 -->
+            <div id="chatLog" style="height:360px;overflow-y:auto;background:#fff;border:1px solid #ccc;padding:6px 4px;font-size:14px;"></div>
+            <div style="display:flex;margin-top:4px;">
+                <input id="chatInput" type="text" placeholder="输入聊天内容" style="flex:1;padding:4px 6px;font-size:14px;">
+                <button id="chatSend" style="padding:4px 10px;margin-left:6px;background:#2ecc71;color:#fff;border:none;border-radius:4px;">发送</button>
+            </div>
+        </div>
+    </div>
+    <button id="undoBtn" style="display:none;padding:4px 10px;margin-top:8px;background:#e74c3c;color:#fff;border:none;border-radius:4px;">悔棋</button>
+
+    <!-- 胜负弹窗 -->
+    <div id="winModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);align-items:center;justify-content:center;z-index:1000;">
+        <div style="background:#fff;padding:20px 30px;border-radius:8px;box-shadow:0 2px 10px rgba(0,0,0,.3);text-align:center;min-width:220px;">
+            <div id="winText" style="font-size:18px;font-weight:bold;margin-bottom:16px;">—</div>
+            <button id="winOk" style="padding:6px 20px;border:none;border-radius:4px;background:#3498db;color:#fff;cursor:pointer;">确定</button>
+        </div>
+    </div>
+
+<script src="/static/libs/socket.io.min.js"></script>
+<script>
+// ----------- 绘制相关 -----------
+const canvas = document.getElementById('board');
+const ctx = canvas.getContext('2d');
+const N = 21;
+const CELL = canvas.width / (N+1);
+let board = Array.from({length:N}, () => Array(N).fill(0)); // 0 empty,1 black,2 white
+let moves = []; // 历史
+let hover = {x:-1,y:-1};
+let lastMove = null; // {x,y,color}
+function drawBoard(){
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    ctx.fillStyle = '#d8a45a';
+    ctx.fillRect(0,0,canvas.width,canvas.height);
+    ctx.strokeStyle = '#333';
+    for(let i=1;i<=N;i++){
+        ctx.beginPath();
+        ctx.moveTo(CELL,i*CELL);
+        ctx.lineTo(N*CELL, i*CELL);
+        ctx.moveTo(i*CELL, CELL);
+        ctx.lineTo(i*CELL, N*CELL);
+        ctx.stroke();
+    }
+    moves.forEach(m=>{
+        drawPiece(m.x,m.y,m.color===1);
+    });
+    // highlight last move
+    if(lastMove){
+        ctx.strokeStyle='#f00';ctx.lineWidth=2;
+        ctx.strokeRect((lastMove.x+1)*CELL-CELL*0.45,(lastMove.y+1)*CELL-CELL*0.45,CELL*0.9,CELL*0.9);
+        ctx.lineWidth=1;
+    }
+    // draw move numbers for review when game stopped
+    if(!started && moves.length){
+        ctx.fillStyle='#ff0000';
+        ctx.font=`${CELL*0.3}px Arial`;
+        ctx.textAlign='center';
+        ctx.textBaseline='middle';
+        moves.forEach((m,idx)=>{
+            const cx=(m.x+1)*CELL, cy=(m.y+1)*CELL;
+            ctx.fillStyle = m.color===1? '#fff':'#000';
+            ctx.fillText(idx+1, cx, cy);
+        });
+    }
+    // hover outline
+    if(hover.x>=0 && hover.y>=0 && board[hover.y][hover.x]===0 && role!=='spectator' && started && myColor===turn){
+        ctx.strokeStyle='#000';ctx.setLineDash([5,4]);
+        ctx.strokeRect((hover.x+1)*CELL-CELL*0.45,(hover.y+1)*CELL-CELL*0.45,CELL*0.9,CELL*0.9);
+        ctx.setLineDash([]);
+    }
+}
+function drawPiece(x,y,isBlack){
+    const cx = (x+1)*CELL;
+    const cy = (y+1)*CELL;
+    ctx.beginPath();
+    ctx.arc(cx,cy,CELL*0.4,0,Math.PI*2);
+    ctx.fillStyle = isBlack ? '#000' : '#fff';
+    ctx.fill();
+    ctx.strokeStyle='#000';
+    ctx.stroke();
+}
+function coord(e){
+    const rect = canvas.getBoundingClientRect();
+    const x = Math.round((e.clientX - rect.left) / CELL - 1);
+    const y = Math.round((e.clientY - rect.top) / CELL - 1);
+    return (x>=0&&y>=0&&x<N&&y<N)?{x,y}:null;
+}
+function winCheck(x,y,color){
+    const dir = [[1,0],[0,1],[1,1],[1,-1]];
+    const cnt = (dx,dy)=>{
+        let c=0,i=1;
+        while(true){
+            const nx=x+dx*i, ny=y+dy*i;
+            if(nx<0||ny<0||nx>=N||ny>=N||board[ny][nx]!==color) break;
+            c++; i++;
+        }
+        return c;
+    };
+    return dir.some(([dx,dy])=>cnt(dx,dy)+cnt(-dx,-dy)>=4);
+}
+function place(x,y,color){
+    if(board[y][x]!==0) return false;
+    board[y][x]=color;
+    lastMove = {x,y,color};
+    moves.push({x,y,color});
+    drawBoard();
+    return true;
+}
+
+// ----------- 状态与 UI -----------
+const statusEl = document.getElementById('status');
+const readyBtn = document.getElementById('ready');
+const specBox = document.getElementById('spectator');
+const specNumEl = document.getElementById('specNum');
+const undoBtn = document.getElementById('undoBtn');
+const chatLog=document.getElementById('chatLog');
+const chatInput=document.getElementById('chatInput');
+const chatSend=document.getElementById('chatSend');
+let role = 'spectator'; // host | player | spectator
+let myColor = 0; // 1 or 2
+let turn = 1;
+let started = false;
+let readyBlack = readyWhite = false;
+let mySeat = null; // 'black' or 'white'
+let seated = false; // self seated?
+
+// Fetch nickname from server (per IP). If 未设置则提示一次。
+let playerName = '匿名';
+fetch('/username').then(r=>r.json()).then(d=>{
+    if(d.name){ playerName = d.name; }
+    if(playerName==='匿名'){
+        const nn = prompt('请输入你的昵称','');
+        if(nn && nn.trim()){
+            playerName = nn.trim();
+            fetch('/username',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:playerName})});
+        }
+    }
+}).catch(()=>{});
+
+// IP and display name (name + ip) will be set after receiving role event
+let myIP = '未知';
+let displayName = playerName; // placeholder until IP known
+
+// New role display elements
+const hostInfo = document.getElementById('hostInfo');
+const playerInfo = document.getElementById('playerInfo');
+const playerListDiv = document.getElementById('playerList');
+const sitTopBtn = document.getElementById('sitTop');
+const sitBottomBtn = document.getElementById('sitBottom');
+const leaveSeatBtn = document.getElementById('leaveSeat');
+
+// seating state
+let seatBlackTaken = false;
+let seatWhiteTaken = false;
+
+// ---- Role list state ----
+let hostDisplay='';
+let playerDisplay='';
+let spectators=[]; // array of names
+
+function renderPlayerList(){
+    const list=[];
+    if(hostDisplay) list.push(hostDisplay + (seatBlackTaken?' (已坐下)':'') + (readyBlack?' (已准备)':''));
+    if(playerDisplay) list.push(playerDisplay + (seatWhiteTaken?' (已坐下)':'') + (readyWhite?' (已准备)':''));
+    spectators.forEach(n=>list.push(n));
+    playerListDiv.innerHTML = list.map(n=>`<div>${n}</div>`).join('');
+}
+
+function updateSeatButtons(){
+    if(started){
+        sitTopBtn.style.display = 'none';
+        sitBottomBtn.style.display = 'none';
+        leaveSeatBtn.style.display = 'none';
+    } else {
+        sitTopBtn.style.display = (!seatBlackTaken && !seated)? 'inline-block':'none';
+        sitBottomBtn.style.display = (!seatWhiteTaken && !seated)? 'inline-block':'none';
+        leaveSeatBtn.style.display = seated? 'inline-block':'none';
+    }
+    readyBtn.style.display = 'inline-block';
+    readyBtn.disabled = !seated;
+}
+
+function renderRoleList(){
+    renderPlayerList();
+    updateSeatButtons();
+}
+
+function updateStatus(){
+    if(!started){
+        statusEl.textContent = '等待双方准备...';
+        return;
+    }
+    statusEl.textContent = `轮到 ${(turn===1?'黑':'白')}` + (turn===myColor?' (你)':'');
+}
+
+// ----------- Socket -----------
+const params = new URLSearchParams(location.search);
+const ROOM = params.get('room')||Math.random().toString(36).slice(2,8);
+const GAME_ID = 'FiveinaRow';
+const socket = io('/signal', { transports:['websocket'] });
+socket.on('connect', ()=>{
+    socket.emit('join',{game:GAME_ID,room:ROOM});
+});
+
+socket.on('role', data=>{
+    // reset state
+    role = data.role==='host'?'host':(data.role==='client'?'player':'spectator');
+    myColor = role==='host'?1:(role==='player'?2:0);
+    started = false;
+    readyBlack = readyWhite = false;
+    moves = [];
+    board = Array.from({length:N}, () => Array(N).fill(0));
+    drawBoard();
+    // UI
+    if(role==='spectator'){
+        readyBtn.style.display = 'none';
+        specBox.style.display = 'block';
+    } else {
+        readyBtn.style.display = 'inline-block';
+        readyBtn.disabled = false;
+        readyBtn.textContent = '准备';
+        specBox.style.display = 'block';
+    }
+    updateStatus();
+    specNumEl.textContent = Math.max(0,data.players-2);
+    // host记录房主ip via server.
+    if(role!=='host'){
+        socket.emit('signal',{game:GAME_ID,type:'sync_request'});
+    }
+    undoBtn.style.display = 'inline-block';
+
+    // Save IP & build display name
+    myIP = data.ip || '未知';
+    displayName = `${playerName}(${myIP})`;
+
+    // announce join with display name
+    socket.emit('signal',{game:GAME_ID,type:'chat_sys',sub:'join',name:displayName});
+
+    // update local list & broadcast identity
+    if(role==='host') hostDisplay = displayName;
+    else if(role==='player') playerDisplay = displayName;
+    else if(!spectators.includes(displayName)) spectators.push(displayName);
+    renderRoleList();
+
+    socket.emit('signal',{game:GAME_ID,type:'id_update',name:displayName,role:role});
+});
+
+socket.on('player_count', d=>{
+    if(d.players!=null){
+        // 如果对手离开, 重置棋盘与座位
+        if(started && (role==='host'||role==='player') && d.players < 2){
+            started = false;
+            readyBlack = readyWhite = false;
+            seatBlackTaken = seatWhiteTaken = seated = false;
+            moves = [];
+            board = Array.from({length:N}, () => Array(N).fill(0));
+            lastMove = null;
+            turn = 1;
+            drawBoard();
+            statusEl.textContent = '对手已退出，棋盘已重置';
+            renderRoleList();
+        }
+    }
+});
+
+socket.on('role_update', d=>{
+    if(d.role==='spectator'&&role!=='spectator'){
+        alert('房主已离开或位置变动，房间已关闭');
+        location.reload();
+    }
+});
+
+socket.on('signal', data=>{
+    switch(data.type){
+        case 'move':
+            if(!started) break;
+            place(data.x,data.y,data.color);
+            turn = 3 - data.color;
+            if(winCheck(data.x,data.y,data.color)){
+                statusEl.textContent = (data.color===myColor?'你':'对手')+'胜利!';
+                if(mySeat){
+                    socket.emit('signal',{game:GAME_ID,type:'game_over',winner:data.color===1?'black':'white'});
+                }
+                showWin(`${data.color===1?'黑棋':'白棋'} 获胜!`);
+            } else {
+                updateStatus();
+            }
+            break;
+        case 'ready':
+            if(data.who==='black') readyBlack = true;
+            else if(data.who==='white') readyWhite = true;
+            if(readyBlack&&readyWhite&&!started){
+                started = true;
+                readyBtn.style.display = 'none';
+                turn = 1;
+                updateStatus();
+                socket.emit('signal',{game:GAME_ID,type:'start'});
+            }
+            renderRoleList();
+            break;
+        case 'sync_request':
+            if(role==='host'){
+                socket.emit('signal',{
+                    game:GAME_ID,
+                    type:'sync_state',
+                    moves,
+                    started,
+                    turn,
+                    hostName:hostDisplay,
+                    playerName:playerDisplay,
+                    readyBlack,
+                    readyWhite,
+                    specList:spectators
+                });
+            }
+            break;
+        case 'sync_state':
+            board = Array.from({length:N}, () => Array(N).fill(0));
+            moves = data.moves||[];
+            lastMove = moves.length? moves[moves.length-1]:null;
+            moves.forEach(m=>board[m.y][m.x]=m.color);
+            started = data.started;
+            turn = data.turn;
+
+            hostDisplay = data.hostName || hostDisplay;
+            playerDisplay = data.playerName || playerDisplay;
+            readyBlack = data.readyBlack !== undefined ? data.readyBlack : readyBlack;
+            readyWhite = data.readyWhite !== undefined ? data.readyWhite : readyWhite;
+            spectators = data.specList || spectators;
+            renderRoleList();
+
+            drawBoard();
+            updateStatus();
+            break;
+        case 'undo':
+            if(moves.length){ const m=moves.pop(); board[m.y][m.x]=0; lastMove=moves[moves.length-1]||null; turn=m.color; drawBoard(); updateStatus(); }
+            break;
+        case 'undo_request':
+            if(role==='host' && moves.length){ const last=moves[moves.length-1]; if(last.color===2 && turn===1){ // allow
+                doUndoLocal(); socket.emit('signal',{game:GAME_ID,type:'undo'}); }
+            }
+            break;
+        case 'chat':
+            addMsg(`${data.name}: ${data.msg}`);
+            break;
+        case 'chat_sys':
+            if(data.sub==='join') {
+                addMsg(`系统: ${data.name} 加入了房间`,'sys');
+                if(![hostDisplay,playerDisplay].includes(data.name) && !spectators.includes(data.name)) spectators.push(data.name);
+            }
+            if(data.sub==='leave') {
+                addMsg(`系统: ${data.name} 离开了房间`,'sys');
+                removeName(data.name);
+            }
+            if(data.sub==='win') {
+                addMsg(`系统: ${data.name} 获胜!`,'sys');
+                showWin(`${data.name} 获胜!`);
+            }
+            renderRoleList();
+            break;
+        case 'id_update':
+            if(data.role==='host') hostDisplay = data.name;
+            else if(data.role==='player') playerDisplay = data.name;
+            else {
+                if(!spectators.includes(data.name)) spectators.push(data.name);
+            }
+            renderRoleList();
+            break;
+        case 'sit':
+            if(data.seat==='black'){
+                seatBlackTaken = true;
+                hostDisplay = data.name;
+                mySeat='black';
+                myColor=1;
+            } else if(data.seat==='white'){
+                seatWhiteTaken = true;
+                playerDisplay = data.name;
+                mySeat='white';
+                myColor=2;
+            }
+            if(data.name===displayName){ seated = true; }
+            renderRoleList();
+            break;
+        case 'leave_seat':
+            if(data.seat==='black'){
+                seatBlackTaken = false;
+                readyBlack = false;
+            } else if(data.seat==='white'){
+                seatWhiteTaken = false;
+                readyWhite = false;
+            }
+            if(data.name===displayName){ seated = false; }
+            renderRoleList();
+            break;
+        case 'start':
+            started=true;
+            readyBtn.style.display='none';
+            updateSeatButtons();
+            updateStatus();
+            break;
+        case 'game_over':
+            started=false;
+            readyBlack=readyWhite=false;
+            seatBlackTaken=seatWhiteTaken=false;
+            mySeat=null; seated=false;
+            renderRoleList();
+            updateStatus();
+            showWin(`${data.winner==='black'?'黑棋':'白棋'} 获胜!`);
+            break;
+    }
+});
+
+readyBtn.addEventListener('click',()=>{
+    if(!seated) return; // 未坐下不能准备
+    readyBtn.disabled = true;
+    readyBtn.textContent = '已准备';
+    if(mySeat==='black') readyBlack = true;
+    else if(mySeat==='white') readyWhite = true;
+    socket.emit('signal',{game:GAME_ID,type:'ready',who:mySeat});
+    renderRoleList();
+    if(readyBlack&&readyWhite&&!started){
+        started = true;
+        readyBtn.style.display = 'none';
+        turn = 1;
+        updateStatus();
+        socket.emit('signal',{game:GAME_ID,type:'start'});
+    }
+});
+
+// 坐下按钮事件
+sitTopBtn.addEventListener('click',()=>{
+    if(role!=='host' || seatBlackTaken) return;
+    seatBlackTaken = true; seated = true;
+    mySeat='black';
+    myColor=1;
+    socket.emit('signal',{game:GAME_ID,type:'sit',seat:'black',name:displayName});
+    renderRoleList();
+});
+
+sitBottomBtn.addEventListener('click',()=>{
+    if(role!=='player' || seatWhiteTaken) return;
+    seatWhiteTaken = true; seated = true;
+    mySeat='white';
+    myColor=2;
+    socket.emit('signal',{game:GAME_ID,type:'sit',seat:'white',name:displayName});
+    renderRoleList();
+});
+
+canvas.addEventListener('click',e=>{
+    if(!started || !seated) return;
+    const c = coord(e);
+    if(!c) return;
+    if(myColor!==turn) return;
+
+    if(mySeat==='black'){
+        if(place(c.x,c.y,1)){
+            if(winCheck(c.x,c.y,1)){
+                statusEl.textContent = '黑棋胜利';
+                socket.emit('signal',{game:GAME_ID,type:'game_over',winner:'black'});
+                showWin('黑棋 获胜!');
+            } else {
+                turn = 2;
+                updateStatus();
+            }
+            socket.emit('signal',{game:GAME_ID,type:'move',x:c.x,y:c.y,color:1});
+            undoBtn.disabled = false;
+        }
+    } else if(mySeat==='white'){
+        if(place(c.x,c.y,2)){
+            if(winCheck(c.x,c.y,2)){
+                statusEl.textContent = '白棋胜利';
+                socket.emit('signal',{game:GAME_ID,type:'game_over',winner:'white'});
+                showWin('白棋 获胜!');
+            } else {
+                turn = 1;
+                updateStatus();
+            }
+            socket.emit('signal',{game:GAME_ID,type:'move',x:c.x,y:c.y,color:2});
+            undoBtn.disabled = false;
+        }
+    }
+});
+
+canvas.addEventListener('mousemove',e=>{
+    const c = coord(e);
+    if(!c){
+        hover = {x:-1,y:-1};
+        drawBoard();
+        return;
+    }
+    hover = c;
+    drawBoard();
+});
+
+function canUndo(){
+    if(moves.length===0) return false;
+    const last = moves[moves.length-1];
+    return last.color===myColor && turn===myColor;
+}
+
+function doUndoLocal(){
+    const m = moves.pop();
+    if(!m) return;
+    board[m.y][m.x] = 0;
+    lastMove = moves[moves.length-1]||null;
+    turn = myColor;
+    drawBoard();
+}
+
+undoBtn.addEventListener('click',()=>{
+    if(!canUndo()) return;
+    if(role==='host'){
+        doUndoLocal();
+        socket.emit('signal',{game:GAME_ID,type:'undo'});
+    } else if(role==='player'){
+        socket.emit('signal',{game:GAME_ID,type:'undo_request'});
+    }
+});
+
+function addMsg(text,cls=''){ const div=document.createElement('div'); div.textContent=text; if(cls) div.className=cls; chatLog.appendChild(div); chatLog.scrollTop=chatLog.scrollHeight; }
+
+chatSend.addEventListener('click',()=>{
+    const txt=chatInput.value.trim(); if(!txt) return; chatInput.value='';
+    socket.emit('signal',{game:GAME_ID,type:'chat',name:displayName,msg:txt});
+    addMsg(`${displayName}: ${txt}`);
+});
+
+chatInput.addEventListener('keyup',e=>{ if(e.key==='Enter') chatSend.click(); });
+
+window.addEventListener('beforeunload',()=>{
+    socket.emit('signal',{game:GAME_ID,type:'chat_sys',sub:'leave',name:displayName});
+});
+
+function removeName(name){
+    if(hostDisplay===name) hostDisplay='';
+    if(playerDisplay===name) playerDisplay='';
+    const idx=spectators.indexOf(name);
+    if(idx>-1) spectators.splice(idx,1);
+}
+
+// Win modal elements
+const winModal=document.getElementById('winModal');
+const winText=document.getElementById('winText');
+const winOk=document.getElementById('winOk');
+
+function showWin(msg){
+    winText.textContent=msg;
+    winModal.style.display='flex';
+}
+
+function resetGameState(){
+    started=false;
+    readyBlack=readyWhite=false;
+    seatBlackTaken = seatWhiteTaken = seated = false;
+    moves=[];
+    board = Array.from({length:N}, () => Array(N).fill(0));
+    lastMove=null;
+    turn=1;
+    drawBoard();
+    updateStatus();
+    updateSeatButtons();
+}
+
+winOk.addEventListener('click',()=>{
+    winModal.style.display='none';
+    resetGameState();
+});
+
+// 离开座位按钮
+leaveSeatBtn.addEventListener('click',()=>{
+    if(!seated || started) return; // during game can't leave
+    if(role==='host'){
+        seatBlackTaken = false;
+        readyBlack = false;
+    } else if(role==='player'){
+        seatWhiteTaken = false;
+        readyWhite = false;
+    }
+    seated = false;
+    readyBtn.disabled = true;
+    readyBtn.textContent = '准备';
+    socket.emit('signal',{game:GAME_ID,type:'leave_seat',seat:mySeat,name:displayName});
+    mySeat=null;
+    renderRoleList();
+});
+
+drawBoard();
+</script>
+</body>
+</html> 

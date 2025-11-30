@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>找不同颜色</title>
+    <style>
+        body {
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background-color: #f0f0f0;
+            font-family: Arial, sans-serif;
+        }
+        .game-container {
+            text-align: center;
+        }
+        .status {
+            font-size: 24px;
+            margin: 20px 0;
+            color: #2c3e50;
+        }
+        .timer {
+            font-size: 20px;
+            margin: 10px 0;
+            color: #e74c3c;
+        }
+        .score {
+            font-size: 20px;
+            margin: 10px 0;
+            color: #2ecc71;
+        }
+        .level-hints {
+            font-size: 16px;
+            margin: 15px 0;
+            color: #7f8c8d;
+            white-space: pre-line;
+            line-height: 1.5;
+        }
+        .board {
+            background-color: #e0e0e0;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+            display: inline-block;
+        }
+        .grid {
+            display: grid;
+            gap: 4px;
+            background-color: #e0e0e0;
+        }
+        .cell {
+            width: 60px;
+            height: 60px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        .cell:hover {
+            transform: scale(1.05);
+        }
+        .game-over {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255, 255, 255, 0.95);
+            padding: 30px;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.2);
+            display: none;
+        }
+        .restart-btn {
+            margin-top: 20px;
+            padding: 12px 30px;
+            font-size: 20px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        .restart-btn:hover {
+            background-color: #2980b9;
+        }
+        .debug-info {
+            position: fixed;
+            left: 20px;
+            top: 20px;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 15px;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 14px;
+            line-height: 1.5;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        @keyframes flash {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        .flash {
+            animation: flash 0.5s ease-in-out;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <div class="status" id="status">第1关 (2x2)</div>
+        <div class="timer" id="timer">剩余时间: 60秒</div>
+        <div class="score" id="score">得分: 0</div>
+        <div class="board">
+            <div class="grid" id="grid"></div>
+        </div>
+        <div class="level-hints">
+0-10 色盲
+11-18 色弱
+19-25色人
+26-29 色强
+30-33 色鬼
+34-36 色魔
+37+ 色神</div>
+    </div>
+    <div id="game-over" class="game-over">
+        <h2>游戏结束!</h2>
+        <p id="result-message">你的最终得分是: 0</p>
+        <button class="restart-btn" onclick="startGame()">重新开始</button>
+    </div>
+
+    <script>
+        let currentLevel = 1;
+        let timeLeft = 60;
+        let timerInterval = null;
+        let differentCellIndex = null;
+        let baseColor = null;
+        let differentColor = null;
+        let score = 0;
+        let hintTimeout = null;  // 添加提示计时器变量
+
+        function startGame() {
+            // 重置游戏状态
+            currentLevel = 1;
+            timeLeft = 60;
+            score = 0;
+            document.getElementById('status').textContent = `第1关 (2x2)`;
+            document.getElementById('timer').textContent = `剩余时间: ${timeLeft}秒`;
+            document.getElementById('score').textContent = `得分: ${score}`;
+            document.getElementById('game-over').style.display = 'none';
+            
+            // 清除之前的计时器
+            if (timerInterval) {
+                clearInterval(timerInterval);
+            }
+            if (hintTimeout) {
+                clearTimeout(hintTimeout);
+            }
+            
+            // 开始计时
+            timerInterval = setInterval(updateTimer, 1000);
+            
+            // 创建第一关
+            createLevel(2);
+        }
+
+        function createLevel(size) {
+            const grid = document.getElementById('grid');
+            grid.innerHTML = '';
+            
+            // 计算方块大小：从60px开始，随着关卡增加逐渐减小，最小20px
+            const cellSize = Math.max(60 - (currentLevel - 1) * 2, 20);
+            grid.style.gridTemplateColumns = `repeat(${size}, ${cellSize}px)`;
+            
+            // 更新所有方块的样式
+            const style = document.createElement('style');
+            style.textContent = `
+                .cell {
+                    width: ${cellSize}px;
+                    height: ${cellSize}px;
+                    border-radius: 5px;
+                    cursor: pointer;
+                    transition: transform 0.2s;
+                }
+                @keyframes flash {
+                    0% { opacity: 1; }
+                    50% { opacity: 0.5; }
+                    100% { opacity: 1; }
+                }
+                .flash {
+                    animation: flash 0.5s ease-in-out;
+                }
+            `;
+            document.head.appendChild(style);
+            
+            // 生成基础颜色，所有通道限制在60-120之间
+            const r = Math.floor(Math.random() * 61) + 60;  // 60-120
+            const g = Math.floor(Math.random() * 61) + 60;  // 60-120
+            const b = Math.floor(Math.random() * 61) + 60;  // 60-120
+            baseColor = `rgb(${r}, ${g}, ${b})`;
+            
+            // 计算差异值（从50开始递减，最小值为5）
+            const difference = Math.max(50 - currentLevel * 2, 5);
+            // 随机决定是增加还是减少
+            const isPositive = Math.random() > 0.5;
+            const finalDifference = isPositive ? difference : -difference;
+            
+            // 随机选择要改变的颜色通道
+            const channel = Math.floor(Math.random() * 3);
+            const newColor = [...baseColor.match(/\d+/g)];
+            
+            // 主要通道使用较大的差异值
+            newColor[channel] = parseInt(newColor[channel]) + finalDifference;
+            
+            // 其他两个通道使用较小的差异值
+            const smallDifference = Math.max(50 - currentLevel * 1, 0);
+            for (let i = 0; i < 3; i++) {
+                if (i !== channel) {
+                    const isPositiveSmall = Math.random() > 0.5;
+                    const finalSmallDifference = isPositiveSmall ? smallDifference : -smallDifference;
+                    newColor[i] = parseInt(newColor[i]) + finalSmallDifference;
+                }
+            }
+            
+            differentColor = `rgb(${newColor[0]}, ${newColor[1]}, ${newColor[2]})`;
+            
+            // 随机选择不同颜色的格子位置
+            differentCellIndex = Math.floor(Math.random() * (size * size));
+            
+            // 创建格子
+            for (let i = 0; i < size * size; i++) {
+                const cell = document.createElement('div');
+                cell.className = 'cell';
+                cell.style.backgroundColor = i === differentCellIndex ? differentColor : baseColor;
+                cell.onclick = () => handleCellClick(i);
+                grid.appendChild(cell);
+            }
+
+            // 设置5秒后显示提示
+            if (hintTimeout) {
+                clearTimeout(hintTimeout);
+            }
+            hintTimeout = setTimeout(() => {
+                const differentCell = grid.children[differentCellIndex];
+                // 闪烁两次
+                let flashCount = 0;
+                const flashInterval = setInterval(() => {
+                    differentCell.classList.add('flash');
+                    setTimeout(() => {
+                        differentCell.classList.remove('flash');
+                        flashCount++;
+                        if (flashCount >= 2) {
+                            clearInterval(flashInterval);
+                        }
+                    }, 500);
+                }, 1000);
+            }, 5000);
+        }
+
+        function handleCellClick(index) {
+            if (index === differentCellIndex) {
+                // 清除提示计时器
+                if (hintTimeout) {
+                    clearTimeout(hintTimeout);
+                }
+                
+                // 增加分数
+                score++;
+                document.getElementById('score').textContent = `得分: ${score}`;
+                
+                // 进入下一关
+                currentLevel++;
+                const newSize = Math.min(currentLevel + 1, 20); // 最大20x20
+                document.getElementById('status').textContent = `第${currentLevel}关 (${newSize}x${newSize})`;
+                createLevel(newSize);
+            }
+        }
+
+        function updateTimer() {
+            timeLeft--;
+            document.getElementById('timer').textContent = `剩余时间: ${timeLeft}秒`;
+            
+            if (timeLeft <= 0) {
+                clearInterval(timerInterval);
+                endGame();
+            }
+        }
+
+        function getLevelTitle(score) {
+            if (score <= 5) return "色盲";
+            if (score <= 10) return "色弱";
+            if (score <= 15) return "色人";
+            if (score <= 20) return "色强";
+            if (score <= 23) return "色鬼";
+            if (score <= 25) return "色魔";
+            return "色神";
+        }
+
+        function endGame() {
+            const levelTitle = getLevelTitle(score);
+            document.getElementById('result-message').textContent = `你的最终得分是: ${score}\n你是${levelTitle}！`;
+            document.getElementById('game-over').style.display = 'block';
+        }
+
+        // 开始游戏
+        startGame();
+    </script>
+</body>
+</html> 

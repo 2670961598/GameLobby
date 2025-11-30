@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>寻找何飞翔</title>
+    <style>
+        body {
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background-color: #f0f0f0;
+            font-family: Arial, sans-serif;
+        }
+        .game-container {
+            text-align: center;
+        }
+        .status {
+            font-size: 24px;
+            margin: 20px 0;
+            color: #2c3e50;
+        }
+        .move-counter {
+            font-size: 20px;
+            margin: 10px 0;
+            color: #7f8c8d;
+        }
+        .board {
+            display: grid;
+            grid-template-columns: repeat(20, 30px);
+            grid-template-rows: repeat(20, 30px);
+            gap: 2px;
+            background-color: #bbada0;
+            padding: 10px;
+            border-radius: 5px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+        }
+        .cell {
+            width: 30px;
+            height: 30px;
+            background-color: #eee4da;
+            border: 2px solid #8f7a66;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+            transition: all 0.2s;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+        .cell:hover {
+            background-color: #ede0c8;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+        .cell.revealed {
+            background-color: #cdc1b4;
+            transform: translateY(0);
+            box-shadow: none;
+        }
+        .cell.hint-number {
+            color: #000;
+        }
+        .cell.hint-distance {
+            color: #2ecc71;
+        }
+        .cell.hint-direction {
+            color: #e74c3c;
+        }
+        .cell.hfx {
+            background-color: #e74c3c;
+            color: white;
+        }
+        .game-over {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255, 255, 255, 0.95);
+            padding: 30px;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.2);
+            display: none;
+        }
+        .restart-btn {
+            margin-top: 20px;
+            padding: 12px 30px;
+            font-size: 20px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        .restart-btn:hover {
+            background-color: #2980b9;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <div class="status" id="status">请根据提示找出HFX所在位置！</div>
+        <div class="move-counter" id="move-counter">步数: 0</div>
+        <div class="board" id="board"></div>
+    </div>
+    <div id="game-over" class="game-over">
+        <h2>游戏结束!</h2>
+        <p id="result-message">恭喜你找到了何飞翔！</p>
+        <button class="restart-btn" onclick="startGame()">重新开始</button>
+    </div>
+
+    <script>
+        const BOARD_SIZE = 20;
+        let hfxPosition = null;
+        let moveCount = 0;
+        let isGameOver = false;
+
+        function startGame() {
+            // 重置游戏状态
+            moveCount = 0;
+            isGameOver = false;
+            document.getElementById('status').textContent = '请根据提示找出HFX所在位置！';
+            document.getElementById('move-counter').textContent = '步数: 0';
+            document.getElementById('game-over').style.display = 'none';
+            
+            // 清空棋盘
+            const board = document.getElementById('board');
+            board.innerHTML = '';
+
+            // 创建格子
+            for (let i = 0; i < BOARD_SIZE * BOARD_SIZE; i++) {
+                const cell = document.createElement('div');
+                cell.className = 'cell';
+                cell.dataset.index = i;
+                cell.onclick = () => handleCellClick(i);
+                board.appendChild(cell);
+            }
+
+            // 随机放置HFX
+            hfxPosition = Math.floor(Math.random() * (BOARD_SIZE * BOARD_SIZE));
+        }
+
+        function handleCellClick(index) {
+            if (isGameOver) return;
+
+            const cell = document.querySelector(`[data-index="${index}"]`);
+            if (cell.classList.contains('revealed')) return;
+
+            moveCount++;
+            document.getElementById('move-counter').textContent = `步数: ${moveCount}`;
+
+            if (index === hfxPosition) {
+                // 找到HFX
+                cell.textContent = 'HFX';
+                cell.classList.add('hfx');
+                setTimeout(() => {
+                    endGame();
+                }, 500);
+            } else {
+                // 显示提示
+                const hint = getHint(index);
+                cell.textContent = hint.text;
+                cell.classList.add('revealed', `hint-${hint.type}`);
+            }
+        }
+
+        function getHint(index) {
+            const hfxRow = Math.floor(hfxPosition / BOARD_SIZE);
+            const hfxCol = hfxPosition % BOARD_SIZE;
+            const clickRow = Math.floor(index / BOARD_SIZE);
+            const clickCol = index % BOARD_SIZE;
+
+            // 随机选择提示类型
+            const hintType = Math.floor(Math.random() * 3);
+
+            switch (hintType) {
+                case 0: // 曼哈顿距离
+                    const manhattanDistance = Math.abs(hfxRow - clickRow) + Math.abs(hfxCol - clickCol);
+                    return { type: 'number', text: manhattanDistance.toString() };
+                
+                case 1: // 直线距离
+                    const distance = Math.sqrt(Math.pow(hfxRow - clickRow, 2) + Math.pow(hfxCol - clickCol, 2));
+                    return { type: 'distance', text: distance.toFixed(1) };
+                
+                case 2: // 方向提示
+                    let directions = [];
+                    if (hfxRow < clickRow) directions.push('U');
+                    if (hfxRow > clickRow) directions.push('D');
+                    if (hfxCol < clickCol) directions.push('L');
+                    if (hfxCol > clickCol) directions.push('R');
+                    const randomDirection = directions[Math.floor(Math.random() * directions.length)];
+                    return { type: 'direction', text: randomDirection };
+            }
+        }
+
+        function endGame() {
+            isGameOver = true;
+            document.getElementById('result-message').textContent = `恭喜你找到了何飞翔！用了${moveCount}步`;
+            document.getElementById('game-over').style.display = 'block';
+        }
+
+        // 开始游戏
+        startGame();
+    </script>
+</body>
+</html> 

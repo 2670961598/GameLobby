@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>炸弹解除游戏</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="startScreen" class="screen">
+        <button id="startButton">开始游戏</button>
+    </div>
+
+    <div id="gameScreen" class="screen hidden">
+        <svg id="connection-lines" class="connection-lines"></svg>
+        <div id="game-title">救救莫颖裕！II</div>
+        <div id="characters">
+            <div class="character" id="char1">
+                <img src="role1.png" alt="角色1">
+                <div class="speech-bubble hidden">
+                    <img src="qipao.png" alt="气泡">
+                    <span class="speech-text"></span>
+                </div>
+            </div>
+            <div class="character" id="char2">
+                <img src="role2.png" alt="角色2">
+                <div class="speech-bubble hidden">
+                    <img src="qipao.png" alt="气泡">
+                    <span class="speech-text"></span>
+                </div>
+            </div>
+            <div class="character" id="char3">
+                <img src="role3.png" alt="角色3">
+                <div class="speech-bubble hidden">
+                    <img src="qipao.png" alt="气泡">
+                    <span class="speech-text"></span>
+                </div>
+            </div>
+        </div>
+
+        <div id="bomb-container">
+            <div id="timer">01:00</div>
+            <img id="bomb" src="bomb.png" alt="炸弹">
+            <div id="wires">
+                <div id="red-wire" class="wire"></div>
+                <div id="blue-wire" class="wire"></div>
+                <div id="yellow-wire" class="wire hidden"></div>
+            </div>
+        </div>
+
+        <div id="explosion" class="hidden">
+            <img src="boom.png" alt="爆炸">
+        </div>
+
+        <div id="game-tip">点击线段剪断之！</div>
+    </div>
+
+    <div id="winModal" class="modal hidden">
+        <div class="modal-content">
+            <h2>游戏胜利！</h2>
+            <button id="restartButton">再玩一次</button>
+        </div>
+    </div>
+
+    <div id="failModal" class="modal hidden">
+        <div class="modal-content">
+            <h2>游戏失败！</h2>
+            <button id="failRestartButton">再玩一次</button>
+        </div>
+    </div>
+
+    <script src="game.js"></script>
+</body>
+</html> 

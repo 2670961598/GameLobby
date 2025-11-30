@@ -1,0 +1,204 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    min-height: 100vh;
+    background-color: #f0f0f0;
+    font-family: Arial, sans-serif;
+    padding: 20px;
+    gap: 20px;
+}
+
+.game-container {
+    width: 640px;
+    background-color: white;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+.leaderboard-container {
+    width: 300px;
+    background-color: white;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+.leaderboard-container h2 {
+    text-align: center;
+    margin-bottom: 15px;
+    color: #333;
+}
+
+.leaderboard {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.leaderboard th,
+.leaderboard td {
+    padding: 8px;
+    text-align: center;
+    border-bottom: 1px solid #ddd;
+}
+
+.leaderboard th {
+    background-color: #f5f5f5;
+    font-weight: bold;
+}
+
+.leaderboard tr:hover {
+    background-color: #f9f9f9;
+}
+
+.game-area {
+    position: relative;
+    height: 500px;
+    background-color: #fff;
+    border: 2px solid #333;
+    margin-bottom: 20px;
+    overflow: hidden;
+}
+
+.score {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    font-size: 18px;
+    z-index: 1;
+}
+
+.controls {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+    position: relative;
+    height: 100px; /* Fixed height for controls area */
+}
+
+#start-btn {
+    background-color: #4CAF50;
+    color: white;
+    padding: 10px 20px;
+    font-size: 16px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+#start-btn.hidden {
+    display: none;
+}
+
+.drop-button-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+}
+
+.drop-button-container.hidden {
+    display: none;
+}
+
+#drop-btn {
+    background-color: #2196F3;
+    color: white;
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    font-size: 24px;
+    border: none;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+button:disabled {
+    background-color: #cccccc;
+    cursor: not-allowed;
+}
+
+.modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    justify-content: center;
+    align-items: center;
+}
+
+.modal-content {
+    background-color: white;
+    padding: 20px;
+    border-radius: 10px;
+    text-align: center;
+    min-width: 300px;
+}
+
+.modal h2 {
+    margin-bottom: 20px;
+}
+
+#restart-btn {
+    background-color: #4CAF50;
+    color: white;
+    margin-top: 20px;
+}
+
+.pipe {
+    position: absolute;
+    background-color: black;
+    height: 20px;
+}
+
+.gripper {
+    position: absolute;
+    background-color: #666;
+    width: 10px;
+    height: 40px;
+}
+
+.modal-content input {
+    width: 100%;
+    padding: 8px;
+    margin: 10px 0;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+.modal-content button {
+    margin: 5px;
+    padding: 8px 16px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    background-color: #4CAF50;
+    color: white;
+}
+
+.modal-content button:hover {
+    background-color: #45a049;
+}
+
+#submitScore {
+    background-color: #2196F3;
+}
+
+#submitScore:hover {
+    background-color: #1976D2;
+} 

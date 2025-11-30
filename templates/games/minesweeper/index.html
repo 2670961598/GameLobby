@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <title>扫雷游戏</title>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
+        }
+        .game-container {
+            margin-top: 20px;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(10, 30px);
+            gap: 1px;
+            background-color: #999;
+            padding: 1px;
+            border: 2px solid #666;
+        }
+        .cell {
+            width: 30px;
+            height: 30px;
+            background-color: #ccc;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+            cursor: pointer;
+            user-select: none;
+        }
+        .cell:hover {
+            background-color: #ddd;
+        }
+        .revealed {
+            background-color: #eee;
+        }
+        .mine {
+            color: red;
+        }
+        .flag {
+            color: blue;
+        }
+        .controls {
+            margin: 20px 0;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+        }
+        .modal-content {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            min-width: 200px;
+        }
+        .modal-title {
+            font-size: 24px;
+            margin-bottom: 20px;
+        }
+        .modal-button {
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            margin-top: 10px;
+        }
+        .modal-button:hover {
+            background-color: #45a049;
+        }
+    </style>
+</head>
+<body>
+    <h1>扫雷游戏</h1>
+    <div class="controls">
+        <button onclick="initGame()">新游戏</button>
+    </div>
+    <div class="game-container">
+        <div id="grid" class="grid"></div>
+    </div>
+
+    <!-- 添加弹窗 -->
+    <div id="gameModal" class="modal">
+        <div class="modal-content">
+            <div id="modalTitle" class="modal-title"></div>
+            <button class="modal-button" onclick="closeModal()">确定</button>
+        </div>
+    </div>
+
+    <script>
+        const GRID_SIZE = 10;
+        const MINE_COUNT = 10;
+        let grid = [];
+        let gameOver = false;
+
+        function initGame() {
+            gameOver = false;
+            grid = [];
+            const gridElement = document.getElementById('grid');
+            gridElement.innerHTML = '';
+
+            // 初始化网格
+            for (let i = 0; i < GRID_SIZE; i++) {
+                grid[i] = [];
+                for (let j = 0; j < GRID_SIZE; j++) {
+                    grid[i][j] = {
+                        isMine: false,
+                        isRevealed: false,
+                        isFlagged: false,
+                        neighborMines: 0
+                    };
+                    const cell = document.createElement('div');
+                    cell.className = 'cell';
+                    cell.dataset.row = i;
+                    cell.dataset.col = j;
+                    cell.addEventListener('click', () => handleClick(i, j));
+                    cell.addEventListener('contextmenu', (e) => {
+                        e.preventDefault();
+                        handleRightClick(i, j);
+                    });
+                    gridElement.appendChild(cell);
+                }
+            }
+
+            // 随机放置地雷
+            let minesPlaced = 0;
+            while (minesPlaced < MINE_COUNT) {
+                const row = Math.floor(Math.random() * GRID_SIZE);
+                const col = Math.floor(Math.random() * GRID_SIZE);
+                if (!grid[row][col].isMine) {
+                    grid[row][col].isMine = true;
+                    minesPlaced++;
+                }
+            }
+
+            // 计算每个格子周围的地雷数
+            for (let i = 0; i < GRID_SIZE; i++) {
+                for (let j = 0; j < GRID_SIZE; j++) {
+                    if (!grid[i][j].isMine) {
+                        grid[i][j].neighborMines = countNeighborMines(i, j);
+                    }
+                }
+            }
+        }
+
+        function countNeighborMines(row, col) {
+            let count = 0;
+            for (let i = -1; i <= 1; i++) {
+                for (let j = -1; j <= 1; j++) {
+                    const newRow = row + i;
+                    const newCol = col + j;
+                    if (newRow >= 0 && newRow < GRID_SIZE && 
+                        newCol >= 0 && newCol < GRID_SIZE && 
+                        grid[newRow][newCol].isMine) {
+                        count++;
+                    }
+                }
+            }
+            return count;
+        }
+
+        function handleClick(row, col) {
+            if (gameOver || grid[row][col].isFlagged) return;
+
+            const cell = grid[row][col];
+            if (cell.isRevealed) return;
+
+            cell.isRevealed = true;
+            updateCellDisplay(row, col);
+
+            if (cell.isMine) {
+                gameOver = true;
+                revealAllMines();
+                // 使用setTimeout确保先显示结果再显示弹窗
+                setTimeout(() => {
+                    showModal('游戏结束！');
+                }, 100);
+                return;
+            }
+
+            if (cell.neighborMines === 0) {
+                // 如果是空格，自动展开周围的格子
+                for (let i = -1; i <= 1; i++) {
+                    for (let j = -1; j <= 1; j++) {
+                        const newRow = row + i;
+                        const newCol = col + j;
+                        if (newRow >= 0 && newRow < GRID_SIZE && 
+                            newCol >= 0 && newCol < GRID_SIZE && 
+                            !grid[newRow][newCol].isRevealed) {
+                            handleClick(newRow, newCol);
+                        }
+                    }
+                }
+            }
+
+            checkWin();
+        }
+
+        function handleRightClick(row, col) {
+            if (gameOver || grid[row][col].isRevealed) return;
+
+            const cell = grid[row][col];
+            cell.isFlagged = !cell.isFlagged;
+            updateCellDisplay(row, col);
+        }
+
+        function updateCellDisplay(row, col) {
+            const cell = grid[row][col];
+            const cellElement = document.querySelector(`[data-row="${row}"][data-col="${col}"]`);
+            
+            if (cell.isFlagged) {
+                cellElement.textContent = '旗';
+                cellElement.classList.add('flag');
+            } else if (cell.isRevealed) {
+                cellElement.classList.add('revealed');
+                if (cell.isMine) {
+                    cellElement.textContent = '雷';
+                    cellElement.classList.add('mine');
+                } else {
+                    cellElement.textContent = cell.neighborMines || '';
+                }
+            } else {
+                cellElement.textContent = '';
+                cellElement.classList.remove('revealed', 'mine', 'flag');
+            }
+        }
+
+        function revealAllMines() {
+            for (let i = 0; i < GRID_SIZE; i++) {
+                for (let j = 0; j < GRID_SIZE; j++) {
+                    if (grid[i][j].isMine) {
+                        grid[i][j].isRevealed = true;
+                        updateCellDisplay(i, j);
+                    }
+                }
+            }
+        }
+
+        function checkWin() {
+            for (let i = 0; i < GRID_SIZE; i++) {
+                for (let j = 0; j < GRID_SIZE; j++) {
+                    const cell = grid[i][j];
+                    if (!cell.isMine && !cell.isRevealed) {
+                        return;
+                    }
+                }
+            }
+            gameOver = true;
+            // 使用setTimeout确保先显示结果再显示弹窗
+            setTimeout(() => {
+                showModal('恭喜你赢了！');
+            }, 100);
+        }
+
+        function showModal(message) {
+            const modal = document.getElementById('gameModal');
+            const modalTitle = document.getElementById('modalTitle');
+            modalTitle.textContent = message;
+            modal.style.display = 'block';
+        }
+
+        function closeModal() {
+            const modal = document.getElementById('gameModal');
+            modal.style.display = 'none';
+        }
+
+        // 初始化游戏
+        initGame();
+    </script>
+</body>
+</html> 

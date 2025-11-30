@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>贪吃蛇</title>
+    <style>
+        body { display:flex; flex-direction:column; align-items:center; font-family: Arial, Helvetica, sans-serif; background:#f5f5f5; margin:0; }
+        h1 { margin:20px 0 10px; }
+        #score { margin-bottom:10px; font-size:18px; font-weight:bold; }
+        canvas { background:#ffffff; border:2px solid #333; }
+        #btn-start { margin-top:15px; padding:8px 18px; font-size:16px; cursor:pointer; }
+    </style>
+</head>
+<body>
+    <h1>贪吃蛇</h1>
+    <div style="margin-bottom:8px;">
+        难度：
+        <label><input type="radio" name="diff" value="easy" checked> 简单</label>
+        <label><input type="radio" name="diff" value="medium"> 中等</label>
+        <label><input type="radio" name="diff" value="hard"> 困难</label>
+    </div>
+    <div id="score">分数: 0</div>
+    <canvas id="game" width="400" height="400"></canvas>
+    <button id="btn-start">开始游戏</button>
+    <a href="/" id="btn-back" style="margin-top:10px; padding:6px 16px; background:#3498db; color:#fff; border-radius:4px; text-decoration:none; display:inline-block;">返回列表</a>
+
+    <script>
+        const CELL = 20;          // 每格像素（固定）
+        const DIFF_CONFIG = {
+            easy:   {cols: 15, rows: 15, speed: 150},
+            medium: {cols: 20, rows: 20, speed: 120},
+            hard:   {cols: 25, rows: 25, speed: 80}
+        };
+        let COLS = 20, ROWS = 20;
+        const canvas = document.getElementById('game');
+        const ctx = canvas.getContext('2d');
+        const scoreEl = document.getElementById('score');
+        const startBtn = document.getElementById('btn-start');
+
+        let snake, dir, food, timer, score, running = false, playerName = '';
+
+        function initGame(diff) {
+            snake = [{x: 9, y: 9}];             // 初始蛇长1
+            dir = {x: 1, y: 0};                // 向右
+            placeFood();
+            score = 0;
+            scoreEl.textContent = '分数: 0';
+        }
+
+        function placeFood() {
+            while (true) {
+                const fx = Math.floor(Math.random() * COLS);
+                const fy = Math.floor(Math.random() * ROWS);
+                if (!snake.some(s => s.x === fx && s.y === fy)) {
+                    food = {x: fx, y: fy};
+                    break;
+                }
+            }
+        }
+
+        function drawCell(x, y, color) {
+            ctx.fillStyle = color;
+            ctx.fillRect(x * CELL, y * CELL, CELL - 1, CELL - 1);
+        }
+
+        function draw() {
+            ctx.clearRect(0,0, canvas.width, canvas.height);
+            // 画蛇
+            snake.forEach((s, idx) => drawCell(s.x, s.y, idx === 0 ? '#2ecc71' : '#3498db'));
+            // 画食物
+            drawCell(food.x, food.y, '#e74c3c');
+        }
+
+        function step() {
+            const head = {x: snake[0].x + dir.x, y: snake[0].y + dir.y};
+
+            // 撞墙/撞自己
+            if (head.x < 0 || head.y < 0 || head.x >= COLS || head.y >= ROWS || snake.some(s => s.x === head.x && s.y === head.y)) {
+                gameOver();
+                return;
+            }
+
+            snake.unshift(head);
+
+            // 吃食物
+            if (head.x === food.x && head.y === food.y) {
+                score += 1;
+                scoreEl.textContent = `分数: ${score}`;
+                placeFood();
+            } else {
+                snake.pop();
+            }
+
+            draw();
+        }
+
+        function gameLoop() {
+            step();
+        }
+
+        function startGame() {
+            if (running) return;
+            playerName = prompt('请输入姓名：', playerName || '');
+            if (!playerName) return;
+            // 读取难度
+            const diff = document.querySelector('input[name="diff"]:checked').value;
+
+            const cfg = DIFF_CONFIG[diff];
+            COLS = cfg.cols;
+            ROWS = cfg.rows;
+            // 调整 canvas 尺寸
+            canvas.width = COLS * CELL;
+            canvas.height = ROWS * CELL;
+
+            initGame(diff);
+            draw();
+            timer = setInterval(gameLoop, cfg.speed);
+            running = true;
+        }
+
+        function gameOver() {
+            clearInterval(timer);
+            running = false;
+            alert(`游戏结束！\n最终得分: ${score}`);
+            // 读取当前难度
+            const diff = document.querySelector('input[name="diff"]:checked').value;
+            sendScore(diff);
+        }
+
+        startBtn.addEventListener('click', startGame);
+
+        document.addEventListener('keydown', (e) => {
+            if (!running) return;
+            switch(e.key) {
+                case 'ArrowUp': if (dir.y !== 1) dir = {x:0, y:-1}; break;
+                case 'ArrowDown': if (dir.y !== -1) dir = {x:0, y:1}; break;
+                case 'ArrowLeft': if (dir.x !== 1) dir = {x:-1, y:0}; break;
+                case 'ArrowRight': if (dir.x !== -1) dir = {x:1, y:0}; break;
+            }
+        });
+
+        function sendScore(diff) {
+            fetch('/submit-score', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    game: 'snake',
+                    difficulty: diff,
+                    name: playerName,
+                    score: score
+                })
+            })
+            .then(r => r.json())
+            .then(res => {
+                if (res.status === 'ok') {
+                    alert(`已上传！当前排名 ${res.rank}/${res.total}`);
+                }
+            })
+            .catch(console.error);
+        }
+    </script>
+</body>
+</html>

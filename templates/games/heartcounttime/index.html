@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>心算时间游戏</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container main-flex">
+        <div class="left-panel">
+            <h1>请在心里默数10秒</h1>
+            <div class="game-area">
+                <button id="timerButton" class="timer-button">Start</button>
+            </div>
+        </div>
+        <div class="leaderboard right-panel">
+            <h2>排行榜</h2>
+            <table id="leaderboardTable">
+                <thead>
+                    <tr>
+                        <th>排名</th>
+                        <th>姓名</th>
+                        <th>时间</th>
+                        <th>误差</th>
+                    </tr>
+                </thead>
+                <tbody id="leaderboardBody">
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html> 

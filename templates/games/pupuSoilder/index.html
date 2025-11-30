@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>喷射战士 - Splat Mini</title>
+    <link rel="stylesheet" href="css/reset.css">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <!-- 游戏容器 -->
+    <div id="game-container">
+        <!-- 背景画布层 - 用于渲染网格和轨迹 -->
+        <canvas id="ground"></canvas>
+        
+        <!-- 游戏实体层 - 角色、子弹、Buff等动态元素 -->
+        <div id="game-layer">
+            <!-- 角色会动态添加到这里 -->
+        </div>
+        
+        <!-- HUD界面层 -->
+        <div id="hud">
+            <!-- 顶部状态栏 -->
+            <div id="top-bar">
+                <div id="timer">60</div>
+                <div id="scores">
+                    <span class="score score-green">0.0%</span>
+                    <span class="score score-purple">0.0%</span>
+                    <span class="score score-red">0.0%</span>
+                </div>
+            </div>
+            
+            <!-- 玩家血条 -->
+            <div id="player-hud">
+                <div id="health-bar">
+                    <div id="health-fill"></div>
+                </div>
+            </div>
+            
+            <!-- 移动端控制界面 -->
+            <div id="mobile-controls" class="mobile-only">
+                <div id="move-joystick">
+                    <div id="move-joystick-knob"></div>
+                </div>
+                <div id="fire-joystick">
+                    <div id="fire-joystick-knob"></div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 开始界面 -->
+        <div id="start-screen" class="screen active">
+            <div class="screen-content">
+                <h1>喷射战士</h1>
+                <p class="rules">
+                    • 移动留下轨迹占领地盘<br>
+                    • 射击消灭敌方角色<br>
+                    • 60秒后地盘占比最高者获胜<br>
+                    • 金色Buff可增强轨迹效果
+                </p>
+                <button id="start-button" class="game-button">开始游戏</button>
+            </div>
+        </div>
+        
+        <!-- 结束界面 -->
+        <div id="end-screen" class="screen">
+            <div class="screen-content">
+                <h1 id="result-title">游戏结束</h1>
+                <div id="final-scores">
+                    <div class="final-score">
+                        <span class="color-name">绿色</span>
+                        <span class="color-percent">0.0%</span>
+                    </div>
+                    <div class="final-score">
+                        <span class="color-name">紫色</span>
+                        <span class="color-percent">0.0%</span>
+                    </div>
+                    <div class="final-score">
+                        <span class="color-name">红色</span>
+                        <span class="color-percent">0.0%</span>
+                    </div>
+                </div>
+                <div class="buttons">
+                    <button id="restart-button" class="game-button">重新开始</button>
+                    <button id="home-button" class="game-button secondary">主页</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 性能监控（开发用） -->
+        <div id="performance-warning" class="hidden">
+            帧率过低！
+        </div>
+    </div>
+    
+    <!-- 模板定义 -->
+    <template id="player-template">
+        <div class="character player">
+            <div class="character-body"></div>
+            <div class="invincible-effect"></div>
+            <div class="buff-effect"></div>
+        </div>
+    </template>
+    
+    <template id="ai-template">
+        <div class="character ai">
+            <div class="character-body"></div>
+            <div class="invincible-effect"></div>
+            <div class="buff-effect"></div>
+        </div>
+    </template>
+    
+    <template id="bullet-template">
+        <div class="bullet"></div>
+    </template>
+    
+    <template id="buff-template">
+        <div class="buff">
+            <div class="buff-glow"></div>
+        </div>
+    </template>
+    
+    <!-- 脚本加载 -->
+    <!-- 核心系统 -->
+    <script src="js/core/config.js"></script>
+    <script src="js/core/pool.js"></script>
+    <script src="js/core/grid.js"></script>
+    <script src="js/core/physics.js"></script>
+    <script src="js/core/gameLoop.js"></script>
+    
+    <!-- 游戏实体 -->
+    <script src="js/entities/bullet.js"></script>
+    <script src="js/entities/buff.js"></script>
+    <script src="js/entities/player.js"></script>
+    <script src="js/entities/ai.js"></script>
+    
+    <!-- UI系统 -->
+    <script src="js/ui/hud.js"></script>
+    <script src="js/ui/screens.js"></script>
+    
+    <!-- 主启动脚本 -->
+    <script src="js/main.js"></script>
+</body>
+</html> 

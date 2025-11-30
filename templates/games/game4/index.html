@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>喷射战士 Web版</title>
+    <link rel="stylesheet" href="styles/main.css">
+</head>
+<body>
+    <!-- 开始界面 -->
+    <div id="startScreen" class="screen">
+        <h1 class="game-title">喷射战士</h1>
+        <div class="rules">
+            <p>游戏规则：</p>
+            <ul>
+                <li>游戏时长60秒</li>
+                <li>使用<strong>WASD</strong>控制角色移动</li>
+                <li>喷射颜料占领地盘</li>
+                <li>结束时己方颜色占比最高获胜</li>
+            </ul>
+        </div>
+        <button id="startButton" class="start-button">开始游戏</button>
+    </div>
+
+    <!-- 游戏界面 -->
+    <div id="gameScreen" class="screen hidden">
+        <!-- 状态栏 -->
+        <div class="status-bar">
+            <div class="timer">60</div>
+            <div class="score-board">
+                <div class="score green">0%</div>
+                <div class="score purple">0%</div>
+                <div class="score red">0%</div>
+            </div>
+        </div>
+        <div class="health-panel">
+            <div class="health-row player-health">
+                <div class="icon player-icon"></div>
+                <div class="health-bar-ui">
+                    <div class="health-bar-fill-ui player-fill"></div>
+                    <span class="health-text player-text"></span>
+                </div>
+            </div>
+            <div class="health-row ai-purple-health">
+                <div class="icon ai-purple-icon"></div>
+                <div class="health-bar-ui">
+                    <div class="health-bar-fill-ui ai-purple-fill"></div>
+                    <span class="health-text ai-purple-text"></span>
+                </div>
+            </div>
+            <div class="health-row ai-red-health">
+                <div class="icon ai-red-icon"></div>
+                <div class="health-bar-ui">
+                    <div class="health-bar-fill-ui ai-red-fill"></div>
+                    <span class="health-text ai-red-text"></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 游戏主区域 -->
+        <div id="gameArea" class="game-area">
+            <!-- 背景层 -->
+            <div class="layer background-layer"></div>
+            <!-- 轨迹层 -->
+            <div class="layer trail-layer"></div>
+            <!-- Buff层 -->
+            <div class="layer buff-layer"></div>
+            <!-- 角色层 -->
+            <div class="layer character-layer">
+                <div id="player" class="character player"></div>
+            </div>
+            <!-- 特效层 -->
+            <div class="layer effect-layer"></div>
+        </div>
+    </div>
+
+    <!-- 结束界面 -->
+    <div id="endScreen" class="screen hidden">
+        <h2 id="resultTitle" class="result-title"></h2>
+        <div id="finalScore" class="final-score"></div>
+        <div class="button-group">
+            <button id="restartButton" class="game-button">重新开始</button>
+            <button id="homeButton" class="game-button">返回主页</button>
+        </div>
+    </div>
+
+    <!-- 脚本引入 -->
+    <script src="js/colorSystem.js"></script>
+    <script src="js/bullet.js"></script>
+    <script src="js/buff.js"></script>
+    <script src="js/player.js"></script>
+    <script src="js/ai.js"></script>
+    <script src="js/game.js"></script>
+</body>
+</html> 

@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>9格拼图小游戏</title>
+    <style>
+        body { font-family: '微软雅黑', Arial, sans-serif; background: #f0f0f0; margin: 0; padding: 0; }
+        .center-box { max-width: 400px; margin: 40px auto; background: #fff; border-radius: 12px; box-shadow: 0 2px 12px #0001; padding: 32px 24px; text-align: center; }
+        .mode-select { display: flex; justify-content: space-around; margin-bottom: 24px; }
+        .mode-btn { border: none; background: none; padding: 0; cursor: pointer; outline: none; display: flex; flex-direction: column; align-items: center; }
+        .mode-btn img { width: 80px; height: 80px; border-radius: 10px; border: 2px solid #ddd; background: #fff; object-fit: cover; }
+        .mode-btn.locked img { filter: grayscale(1) brightness(1.5); }
+        .mode-label { margin-top: 8px; font-size: 16px; color: #333; }
+        .timer { font-size: 20px; margin-bottom: 16px; color: #1976d2; }
+        .puzzle-board { display: grid; grid-template-columns: repeat(3, 120px); grid-template-rows: repeat(3, 120px); gap: 2px; justify-content: center; margin: 0 auto 16px; }
+        .puzzle-tile { width: 120px; height: 120px; background: #eee; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 32px; user-select: none; transition: box-shadow 0.2s; }
+        .puzzle-tile.empty { background: #fff; cursor: default; }
+        .back-btn { margin-top: 16px; padding: 8px 24px; border: none; background: #1976d2; color: #fff; border-radius: 6px; font-size: 16px; cursor: pointer; }
+        .back-btn:hover { background: #125ea7; }
+        .tip { color: #d32f2f; margin-top: 12px; font-size: 15px; }
+        .mode-img { width: 80px; height: 80px; border-radius: 10px; border: 2px solid #ddd; background: #fff; display: flex; align-items: center; justify-content: center; font-size: 48px; color: #bbb; }
+        .mode-btn.locked .mode-img { color: #bbb; background: #fff; }
+        .leaderboard { position: fixed; top: 20px; right: 20px; width: 200px; background: white; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); padding: 16px; }
+        .leaderboard.left { left: 20px; right: auto; }
+        .leaderboard h3 { margin-top: 0; font-size: 18px; color: #1976d2; }
+        .leaderboard ul { list-style: none; padding: 0; margin: 0; max-height: 200px; overflow-y: auto; }
+        .leaderboard li { padding: 4px 0; border-bottom: 1px solid #eee; }
+    </style>
+</head>
+<body>
+<div class="leaderboard left">
+    <h3>时间排行</h3>
+    <ul id="timeLeaderboard"></ul>
+</div>
+<div class="leaderboard" style="top: 20px;">
+    <h3>步数排行</h3>
+    <ul id="stepsLeaderboard"></ul>
+</div>
+<div class="center-box" id="mainBox">
+    <div id="modeSelect" style="display: block;">
+        <h1 style="font-size: 32px; margin-bottom: 24px; color: #1976d2;">拼图游戏</h1>
+        <div style="border: 2px solid #ddd; border-radius: 12px; padding: 16px; margin-bottom: 16px;">
+            <div style="font-size: 18px; margin-bottom: 16px; color: #555;">请选择底图模式</div>
+            <div class="mode-select">
+                <button class="mode-btn" id="btn-classic">
+                    <img src="1.png" id="img-classic">
+                    <span class="mode-label">经典</span>
+                </button>
+                <button class="mode-btn" id="btn-myy">
+                    <span class="mode-img" id="img-myy"></span>
+                    <span class="mode-label">莫颖裕</span>
+                </button>
+                <button class="mode-btn" id="btn-beauty">
+                    <span class="mode-img" id="img-beauty"></span>
+                    <span class="mode-label">美女</span>
+                </button>
+            </div>
+        </div>
+        <div class="tip" id="tipMsg"></div>
+    </div>
+    <div id="gameArea" style="display: none;">
+        <div class="timer" id="timer">用时：0 秒</div>
+        <div class="timer" id="steps">步数：0</div>
+        <div class="puzzle-board" id="puzzleBoard"></div>
+        <button class="back-btn" onclick="backToMenu()">返回</button>
+    </div>
+</div>
+<script>
+const unlockKey = {
+    classic: true,
+    myy: localStorage.getItem('unlock_myy') === '1',
+    beauty: localStorage.getItem('unlock_beauty') === '1',
+};
+let currentMode = null;
+let timer = 0, timerInterval = null;
+let puzzle = [], emptyIdx = 8, imgSrc = '', gameStartTime = 0;
+let steps = 0;
+const serverUrl = 'http://172.18.67.143:11452';
+const GAME_ID = 'puzzle';
+
+function updateModeButtons() {
+    // 经典永远解锁
+    document.getElementById('btn-classic').classList.remove('locked');
+    document.getElementById('img-classic').style.display = '';
+    // 莫颖裕
+    const myyBtn = document.getElementById('btn-myy');
+    const myyImg = document.getElementById('img-myy');
+    if (unlockKey.myy) {
+        myyBtn.classList.remove('locked');
+        myyImg.innerHTML = '';
+        myyImg.style.background = 'none';
+        myyImg.style.display = 'none';
+        if (!myyBtn.querySelector('img')) {
+            const img = document.createElement('img');
+            img.src = '2.png';
+            img.style.width = '80px';
+            img.style.height = '80px';
+            img.style.borderRadius = '10px';
+            img.style.border = '2px solid #ddd';
+            img.style.background = '#fff';
+            img.style.objectFit = 'cover';
+            myyBtn.insertBefore(img, myyBtn.querySelector('.mode-label'));
+        }
+    } else {
+        myyBtn.classList.add('locked');
+        myyImg.innerHTML = '?';
+        myyImg.style.display = 'flex';
+        // 移除img
+        const img = myyBtn.querySelector('img');
+        if (img) myyBtn.removeChild(img);
+    }
+    // 美女
+    const beautyBtn = document.getElementById('btn-beauty');
+    const beautyImg = document.getElementById('img-beauty');
+    if (unlockKey.beauty) {
+        beautyBtn.classList.remove('locked');
+        beautyImg.innerHTML = '';
+        beautyImg.style.background = 'none';
+        beautyImg.style.display = 'none';
+        if (!beautyBtn.querySelector('img')) {
+            const img = document.createElement('img');
+            img.src = '3.png';
+            img.style.width = '80px';
+            img.style.height = '80px';
+            img.style.borderRadius = '10px';
+            img.style.border = '2px solid #ddd';
+            img.style.background = '#fff';
+            img.style.objectFit = 'cover';
+            beautyBtn.insertBefore(img, beautyBtn.querySelector('.mode-label'));
+        }
+    } else {
+        beautyBtn.classList.add('locked');
+        beautyImg.innerHTML = '?';
+        beautyImg.style.display = 'flex';
+        const img = beautyBtn.querySelector('img');
+        if (img) beautyBtn.removeChild(img);
+    }
+}
+
+function showTip(msg) {
+    document.getElementById('tipMsg').innerText = msg;
+    setTimeout(() => { document.getElementById('tipMsg').innerText = ''; }, 2000);
+}
+
+function backToMenu() {
+    document.getElementById('gameArea').style.display = 'none';
+    document.getElementById('modeSelect').style.display = 'block';
+    stopTimer();
+    updateModeButtons();
+    document.removeEventListener('keydown', handleKeyDown);
+}
+
+function startGame(mode) {
+    currentMode = mode;
+    imgSrc = mode === 'classic' ? '1.png' : mode === 'myy' ? '2.png' : '3.png';
+    document.getElementById('modeSelect').style.display = 'none';
+    document.getElementById('gameArea').style.display = 'block';
+    timer = 0;
+    steps = 0;
+    document.getElementById('timer').innerText = '用时：0 秒';
+    document.getElementById('steps').innerText = '步数：0';
+    puzzle = shufflePuzzle();
+    emptyIdx = puzzle.indexOf(8);
+    renderPuzzle();
+    startTimer();
+    document.addEventListener('keydown', handleKeyDown);
+}
+
+function shufflePuzzle() {
+    let arr;
+    do {
+        arr = Array.from({length: 9}, (_, i) => i);
+        for (let i = arr.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [arr[i], arr[j]] = [arr[j], arr[i]];
+        }
+    } while (!isSolvable(arr) || isSolved(arr));
+    return arr;
+}
+function isSolvable(arr) {
+    let inv = 0;
+    for (let i = 0; i < 9; i++) for (let j = i + 1; j < 9; j++) if (arr[i] !== 8 && arr[j] !== 8 && arr[i] > arr[j]) inv++;
+    return inv % 2 === 0;
+}
+function isSolved(arr) {
+    return arr.every((v, i) => v === i);
+}
+function renderPuzzle() {
+    const board = document.getElementById('puzzleBoard');
+    board.innerHTML = '';
+    for (let i = 0; i < 9; i++) {
+        const tile = document.createElement('div');
+        tile.className = 'puzzle-tile' + (puzzle[i] === 8 ? ' empty' : '');
+        if (puzzle[i] !== 8) {
+            tile.style.backgroundImage = `url('${imgSrc}')`;
+            tile.style.backgroundSize = '360px 360px';
+            tile.style.backgroundPosition = `-${(puzzle[i]%3)*120}px -${Math.floor(puzzle[i]/3)*120}px`;
+            tile.onclick = () => moveTile(i);
+        }
+        board.appendChild(tile);
+    }
+}
+function moveTile(idx) {
+    const moves = [idx-3, idx+3, idx-1, idx+1];
+    if (moves.includes(emptyIdx) &&
+        !(idx%3===0 && emptyIdx===idx-1) &&
+        !(idx%3===2 && emptyIdx===idx+1)) {
+        [puzzle[emptyIdx], puzzle[idx]] = [puzzle[idx], puzzle[emptyIdx]];
+        emptyIdx = idx;
+        steps++;
+        document.getElementById('steps').innerText = '步数：' + steps;
+        renderPuzzle();
+        if (isSolved(puzzle)) finishGame();
+    }
+}
+function startTimer() {
+    timer = 0;
+    gameStartTime = Date.now();
+    timerInterval = setInterval(() => {
+        timer = Math.floor((Date.now() - gameStartTime) / 1000);
+        document.getElementById('timer').innerText = `用时：${timer} 秒`;
+    }, 200);
+}
+function stopTimer() {
+    clearInterval(timerInterval);
+}
+function finishGame() {
+    stopTimer();
+    setTimeout(() => {
+        const winBox = document.createElement('div');
+        winBox.className = 'modal';
+        winBox.style.position = 'fixed';
+        winBox.style.top = '50%';
+        winBox.style.left = '50%';
+        winBox.style.transform = 'translate(-50%, -50%)';
+        winBox.style.background = 'white';
+        winBox.style.padding = '24px';
+        winBox.style.borderRadius = '12px';
+        winBox.style.boxShadow = '0 4px 20px rgba(0,0,0,0.2)';
+        winBox.style.zIndex = '1000';
+        winBox.style.textAlign = 'center';
+        winBox.innerHTML = `
+            <h2 style="margin-bottom: 16px; color: #1976d2;">恭喜通关！</h2>
+            <p style="margin-bottom: 16px;">用时：${timer} 秒</p>
+            <div style="width: 240px; height: 240px; margin: 0 auto; background-image: url('${imgSrc}'); background-size: cover; border-radius: 8px;"></div>
+            <input type="text" id="playerName" placeholder="输入名字" style="margin-top: 16px; padding: 8px; border: 1px solid #ddd; border-radius: 4px; width: 200px;">
+            <div style="margin-top: 16px;">
+                <button onclick="submitScore();" style="padding: 8px 24px; border: none; background: #1976d2; color: white; border-radius: 6px; cursor: pointer; margin-right: 8px;">提交</button>
+                <button onclick="restartGame();" style="padding: 8px 24px; border: none; background: #4CAF50; color: white; border-radius: 6px; cursor: pointer;">重新开始</button>
+            </div>
+        `;
+        document.body.appendChild(winBox);
+        if (currentMode === 'classic') {
+            localStorage.setItem('unlock_myy', '1');
+            unlockKey.myy = true;
+        }
+        if (currentMode === 'myy' && timer <= 60) {
+            localStorage.setItem('unlock_beauty', '1');
+            unlockKey.beauty = true;
+        }
+    }, 200);
+}
+function submitScore() {
+    const playerName = document.getElementById('playerName').value.trim() || '傻逼';
+    fetch(`${serverUrl}/scores`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: playerName, score: timer, game: GAME_ID + '_time' })
+    });
+    fetch(`${serverUrl}/scores`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: playerName, score: steps, game: GAME_ID + '_steps' })
+    });
+    updateLeaderboards();
+    const modal = document.querySelector('.modal');
+    if (modal) {
+        modal.remove();
+    }
+    // 更新按钮状态
+    updateModeButtons();
+}
+function restartGame() {
+    const modal = document.querySelector('.modal');
+    if (modal) {
+        modal.remove();
+    }
+    startGame(currentMode);
+}
+function updateLeaderboards() {
+    fetch(`${serverUrl}/scores?game=${GAME_ID}_time`)
+        .then(response => response.json())
+        .then(data => {
+            data.sort((a, b) => a.score - b.score);
+            const timeList = document.getElementById('timeLeaderboard');
+            timeList.innerHTML = data.map((item, index) => `<li>${index + 1}. ${item.name}: ${item.score}秒</li>`).join('');
+        });
+    fetch(`${serverUrl}/scores?game=${GAME_ID}_steps`)
+        .then(response => response.json())
+        .then(data => {
+            data.sort((a, b) => a.score - b.score);
+            const stepsList = document.getElementById('stepsLeaderboard');
+            stepsList.innerHTML = data.map((item, index) => `<li>${index + 1}. ${item.name}: ${item.score}步</li>`).join('');
+        });
+}
+// 按钮点击逻辑
+function onModeBtnClick(mode) {
+    if (mode === 'classic') {
+        startGame('classic');
+    } else if (mode === 'myy') {
+        if (unlockKey.myy) startGame('myy');
+        else showTip('通关1次经典模式后解锁');
+    } else if (mode === 'beauty') {
+        if (unlockKey.beauty) startGame('beauty');
+        else showTip('60秒内通关莫颖裕模式后解锁');
+    }
+}
+document.getElementById('btn-classic').onclick = () => onModeBtnClick('classic');
+document.getElementById('btn-myy').onclick = () => onModeBtnClick('myy');
+document.getElementById('btn-beauty').onclick = () => onModeBtnClick('beauty');
+function handleKeyDown(e) {
+    if (!document.getElementById('gameArea').style.display === 'block') return;
+    let newIdx = emptyIdx;
+    switch (e.key) {
+        case 'ArrowUp': newIdx = emptyIdx + 3; break;
+        case 'ArrowDown': newIdx = emptyIdx - 3; break;
+        case 'ArrowLeft': newIdx = emptyIdx + 1; break;
+        case 'ArrowRight': newIdx = emptyIdx - 1; break;
+        default: return;
+    }
+    if (newIdx >= 0 && newIdx < 9 && 
+        !(emptyIdx % 3 === 0 && newIdx === emptyIdx - 1) && 
+        !(emptyIdx % 3 === 2 && newIdx === emptyIdx + 1)) {
+        moveTile(newIdx);
+    }
+}
+updateModeButtons();
+// 页面加载时更新排行榜
+updateLeaderboards();
+</script>
+</body>
+</html> 

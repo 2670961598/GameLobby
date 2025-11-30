@@ -1,0 +1,14 @@
+# 多人游戏服务器测试脚本依赖项
+# 根据修复建议添加必要的依赖库
+
+# WebSocket客户端支持 - 修复建议中提到的核心依赖
+python-socketio>=5.0.0
+
+# HTTP请求库 - 用于API测试
+requests>=2.25.0
+
+# 解决 Pillow 版本冲突（如果需要）
+# pillow==10.0.1
+
+# 其他依赖（如果需要）
+# websockets>=10.0  # 备选WebSocket库 

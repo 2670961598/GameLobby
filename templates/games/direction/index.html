@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>方向相反</title>
+    <style>
+        body {
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background-color: #f0f0f0;
+            font-family: Arial, sans-serif;
+        }
+        .game-container {
+            text-align: center;
+        }
+        .arrow {
+            font-size: 120px;
+            margin: 40px 0;
+            transition: transform 0.2s;
+        }
+        .arrow:hover {
+            transform: scale(1.1);
+        }
+        .instruction {
+            font-size: 24px;
+            margin-bottom: 20px;
+            color: #2c3e50;
+        }
+        .score {
+            font-size: 24px;
+            margin: 20px 0;
+            color: #27ae60;
+        }
+        .timer {
+            font-size: 24px;
+            color: #e74c3c;
+        }
+        .game-over {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255, 255, 255, 0.95);
+            padding: 30px;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.2);
+            display: none;
+        }
+        .restart-btn {
+            margin-top: 20px;
+            padding: 12px 30px;
+            font-size: 20px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        .restart-btn:hover {
+            background-color: #2980b9;
+        }
+        .feedback {
+            font-size: 20px;
+            margin-top: 10px;
+            height: 30px;
+        }
+        .correct {
+            color: #27ae60;
+        }
+        .wrong {
+            color: #e74c3c;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <div class="instruction">请按下键盘的相反方向</div>
+        <div id="arrow" class="arrow">↑</div>
+        <div class="score">得分: <span id="score">0</span></div>
+        <div class="timer">剩余时间: <span id="timer">30</span>秒</div>
+        <div id="feedback" class="feedback"></div>
+    </div>
+    <div id="game-over" class="game-over">
+        <h2>游戏结束!</h2>
+        <p>最终得分: <span id="final-score">0</span></p>
+        <button class="restart-btn" onclick="startGame()">重新开始</button>
+    </div>
+
+    <script>
+        let score = 0;
+        let timeLeft = 30;
+        let timer;
+        let currentDirection;
+        let isGameRunning = false;
+
+        const directions = {
+            'ArrowUp': { symbol: '↑', opposite: 'ArrowDown' },
+            'ArrowDown': { symbol: '↓', opposite: 'ArrowUp' },
+            'ArrowLeft': { symbol: '←', opposite: 'ArrowRight' },
+            'ArrowRight': { symbol: '→', opposite: 'ArrowLeft' }
+        };
+
+        function startGame() {
+            score = 0;
+            timeLeft = 30;
+            document.getElementById('score').textContent = score;
+            document.getElementById('game-over').style.display = 'none';
+            document.getElementById('feedback').textContent = '';
+            isGameRunning = true;
+            generateNewDirection();
+            startTimer();
+        }
+
+        function startTimer() {
+            if (timer) clearInterval(timer);
+            timer = setInterval(() => {
+                timeLeft--;
+                document.getElementById('timer').textContent = timeLeft;
+                if (timeLeft <= 0) {
+                    endGame();
+                }
+            }, 1000);
+        }
+
+        function endGame() {
+            isGameRunning = false;
+            clearInterval(timer);
+            document.getElementById('final-score').textContent = score;
+            document.getElementById('game-over').style.display = 'block';
+        }
+
+        function generateNewDirection() {
+            const keys = Object.keys(directions);
+            currentDirection = keys[Math.floor(Math.random() * keys.length)];
+            document.getElementById('arrow').textContent = directions[currentDirection].symbol;
+        }
+
+        function showFeedback(message, isCorrect) {
+            const feedback = document.getElementById('feedback');
+            feedback.textContent = message;
+            feedback.className = 'feedback ' + (isCorrect ? 'correct' : 'wrong');
+            setTimeout(() => {
+                feedback.textContent = '';
+                feedback.className = 'feedback';
+            }, 1000);
+        }
+
+        document.addEventListener('keydown', (event) => {
+            if (!isGameRunning) return;
+
+            const key = event.key;
+            if (key in directions) {
+                event.preventDefault();
+                if (key === directions[currentDirection].opposite) {
+                    // 正确方向
+                    score++;
+                    document.getElementById('score').textContent = score;
+                    showFeedback('正确!', true);
+                    generateNewDirection();
+                } else {
+                    // 错误方向
+                    timeLeft = Math.max(0, timeLeft - 5);
+                    document.getElementById('timer').textContent = timeLeft;
+                    showFeedback('错误!', false);
+                    if (timeLeft <= 0) {
+                        endGame();
+                    }
+                }
+            }
+        });
+
+        // 开始游戏
+        startGame();
+    </script>
+</body>
+</html> 

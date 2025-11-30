@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Click Ball 训练 (Web)</title>
+    <style>
+        :root {
+            --primary: #3498db;
+            --highlight: #f1c40f;
+            --correct: #2ecc71;
+            --wrong: #e74c3c;
+            --bg: #f0f0f0;
+        }
+
+        body {
+            margin: 0;
+            font-family: Arial, Helvetica, sans-serif;
+            background: var(--bg);
+            color: #333;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        h1 {
+            margin-top: 25px;
+        }
+
+        .subtitle {
+            color: #666;
+            margin-bottom: 10px;
+        }
+
+        #timer,
+        #score-display {
+            font-weight: bold;
+            margin: 6px 0;
+            font-size: 1.2rem;
+        }
+
+        #controls {
+            margin-top: 15px;
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+        #start-btn {
+            padding: 8px 20px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        #play-area {
+            position: relative;
+            width: 600px;
+            height: 500px;
+            border: 2px solid var(--primary);
+            background: white;
+            margin: 25px 0;
+            overflow: hidden;
+        }
+
+        .ball {
+            position: absolute;
+            border-radius: 50%;
+            background: var(--highlight);
+            cursor: pointer;
+        }
+
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <h1>Click Ball 训练</h1>
+    <div class="subtitle">30 秒内点击出现的小球得分，错过扣分！</div>
+
+    <!-- Difficulty selection and start button -->
+    <div id="controls">
+        <input id="player-name" type="text" placeholder="请输入姓名" style="padding:4px 8px;" />
+        <label><input type="radio" name="difficulty" value="easy" checked> 简单</label>
+        <label><input type="radio" name="difficulty" value="medium"> 中等</label>
+        <label><input type="radio" name="difficulty" value="hard"> 困难</label>
+        <button id="start-btn">开始游戏</button>
+    </div>
+    <div style="margin-top:8px"><a href="/leaderboard/ball" target="_blank">查看排行榜</a></div>
+
+    <div id="timer" class="hidden">剩余时间: 30s</div>
+    <div id="score-display" class="hidden">得分: 0</div>
+
+    <!-- Play area -->
+    <div id="play-area" class="hidden"></div>
+
+    <script>
+        const playArea = document.getElementById('play-area');
+        const timerEl = document.getElementById('timer');
+        const scoreEl = document.getElementById('score-display');
+        const startBtn = document.getElementById('start-btn');
+        const playerNameInput = document.getElementById('player-name');
+        const difficultyInputs = document.querySelectorAll('input[name="difficulty"]');
+
+        const timeLimit = 30; // seconds
+        let timeLeft = timeLimit;
+        let timerId = null;
+        let score = 0;
+        let gameActive = false;
+        let lifeTimerId = null; // manages ball lifetime
+        let currentDifficulty = 'easy';
+
+        // Number of concurrent balls for each difficulty
+        const ballCountMap = {
+            easy: 7,
+            medium: 5,
+            hard: 3
+        };
+
+        // Ball size per difficulty (px)
+        const sizeMap = {
+            easy: 60,
+            medium: 40,
+            hard: 60
+        };
+
+        function getSelectedDifficulty() {
+            const checked = document.querySelector('input[name="difficulty"]:checked');
+            return checked ? checked.value : 'easy';
+        }
+
+        function updateUI() {
+            timerEl.textContent = `剩余时间: ${timeLeft}s`;
+            scoreEl.textContent = `得分: ${score}`;
+        }
+
+        function getNonOverlapPosition(size) {
+            const maxLeft = 600 - size;
+            const maxTop = 500 - size;
+
+            for (let attempt = 0; attempt < 100; attempt++) {
+                const left = Math.random() * maxLeft;
+                const top = Math.random() * maxTop;
+
+                let overlaps = false;
+                playArea.querySelectorAll('.ball').forEach(b => {
+                    const bSize = parseFloat(b.dataset.size) || 40;
+                    const bLeft = parseFloat(b.style.left);
+                    const bTop = parseFloat(b.style.top);
+
+                    if (Math.abs(left - bLeft) < (size + bSize) / 2 && Math.abs(top - bTop) < (size + bSize) / 2) {
+                        overlaps = true;
+                    }
+                });
+
+                if (!overlaps) return { left, top };
+            }
+            // Fallback after many attempts
+            return { left: Math.random() * maxLeft, top: Math.random() * maxTop };
+        }
+
+        function createBall() {
+            // Create a single ball and add to playArea (no auto-removal)
+            const ball = document.createElement('div');
+            ball.className = 'ball';
+
+            const size = sizeMap[currentDifficulty] || 40; // px
+
+            // Set size styles
+            ball.style.width = `${size}px`;
+            ball.style.height = `${size}px`;
+            ball.dataset.size = size; // store for overlap calculation
+
+            const pos = getNonOverlapPosition(size);
+            ball.style.left = `${pos.left}px`;
+            ball.style.top = `${pos.top}px`;
+
+            ball.addEventListener('click', (e) => {
+                if (!gameActive) return;
+                e.stopPropagation();
+                score += 2;
+                ball.remove();
+                updateUI();
+                createBall();
+            });
+
+            playArea.appendChild(ball);
+        }
+
+        function startTimer() {
+            timerId = setInterval(() => {
+                timeLeft -= 1;
+                timerEl.textContent = `剩余时间: ${timeLeft}s`;
+                if (timeLeft <= 0) {
+                    endGame();
+                }
+            }, 1000);
+        }
+
+        function spawnInitialBalls() {
+            const count = ballCountMap[currentDifficulty] || 3;
+            for (let i = 0; i < count; i++) {
+                createBall();
+            }
+        }
+
+        function startGame() {
+            if (gameActive) return;
+            const enteredName = playerNameInput.value.trim();
+            if (!enteredName) {
+                alert('请先输入姓名');
+                playerNameInput.focus();
+                return;
+            }
+            currentDifficulty = getSelectedDifficulty();
+            window.currentPlayerName = enteredName; // store globally for sendScore
+
+            gameActive = true;
+            score = 0;
+            timeLeft = timeLimit;
+
+            // Show UI components
+            timerEl.classList.remove('hidden');
+            scoreEl.classList.remove('hidden');
+            playArea.classList.remove('hidden');
+
+            // Disable difficulty inputs during play
+            difficultyInputs.forEach(i => (i.disabled = true));
+            startBtn.disabled = true;
+
+            updateUI();
+
+            // Spawn initial set of balls and start timer
+            spawnInitialBalls();
+            startTimer();
+
+            // Prevent accidental score penalty on empty clicks by adding area click handler
+            playArea.addEventListener('click', areaMissHandler);
+        }
+
+        function areaMissHandler(e) {
+            if (!gameActive) return;
+            if (!e.target.classList.contains('ball')) {
+                score -= 1;
+                updateUI();
+            }
+        }
+
+        async function endGame() {
+            if (!gameActive) return;
+            gameActive = false;
+
+            clearInterval(timerId);
+            clearTimeout(lifeTimerId);
+            timerId = null;
+            lifeTimerId = null;
+
+            playArea.removeEventListener('click', areaMissHandler);
+
+            // Clean up play area
+            playArea.innerHTML = '';
+
+            // Enable difficulty selection & start button
+            difficultyInputs.forEach(i => (i.disabled = false));
+            startBtn.disabled = false;
+
+            timerEl.textContent = '时间到!';
+
+            try {
+                const result = await sendScore();
+                if (result && result.status === 'ok') {
+                    const { rank, total, percent } = result;
+                    alert(`30 秒已结束！\n\n最终得分: ${score}\n排名: ${rank}/${total}\n超过了 ${percent}% 的玩家`);
+                } else {
+                    alert(`30 秒已结束！\n\n最终得分: ${score}`);
+                }
+            } catch (err) {
+                console.error(err);
+                alert(`30 秒已结束！\n\n最终得分: ${score}`);
+            }
+        }
+
+        function sendScore() {
+            return fetch('/submit-score', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ score, difficulty: currentDifficulty, name: window.currentPlayerName || '', game: 'ball' })
+            })
+                .then(res => res.json())
+                .catch(err => {
+                    console.error('Failed to send score:', err);
+                    throw err;
+                });
+        }
+
+        startBtn.addEventListener('click', startGame);
+    </script>
+</body>
+</html> 

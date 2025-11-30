@@ -1,0 +1,162 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: Arial, sans-serif;
+    background-color: #f0f0f0;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2rem;
+    padding: 2rem;
+    background-color: white;
+    border-radius: 10px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    max-width: 800px;
+    width: 100%;
+}
+
+h1 {
+    color: #333;
+    text-align: center;
+}
+
+.game-area {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin: 2rem 0;
+}
+
+.timer-button {
+    width: 150px;
+    height: 150px;
+    border-radius: 50%;
+    border: none;
+    font-size: 1.5rem;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background-color: #4CAF50;
+    color: white;
+}
+
+.timer-button:hover {
+    transform: scale(1.05);
+}
+
+.timer-button.stop {
+    background-color: #f44336;
+}
+
+.leaderboard {
+    width: 100%;
+    margin-top: 2rem;
+}
+
+.leaderboard h2 {
+    text-align: center;
+    margin-bottom: 1rem;
+    color: #333;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 1rem;
+}
+
+th, td {
+    padding: 0.75rem;
+    text-align: center;
+    border-bottom: 1px solid #ddd;
+}
+
+th {
+    background-color: #f5f5f5;
+    font-weight: bold;
+}
+
+tr:hover {
+    background-color: #f9f9f9;
+}
+
+.modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    justify-content: center;
+    align-items: center;
+}
+
+.modal-content {
+    background-color: white;
+    padding: 2rem;
+    border-radius: 10px;
+    text-align: center;
+}
+
+.modal input {
+    margin: 1rem 0;
+    padding: 0.5rem;
+    width: 200px;
+}
+
+.modal button {
+    padding: 0.5rem 1rem;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+.modal button:hover {
+    background-color: #45a049;
+}
+
+.container.main-flex {
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 2rem;
+    max-width: 1000px;
+}
+
+.left-panel {
+    flex: 2;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.right-panel {
+    flex: 1;
+    min-width: 320px;
+    max-width: 400px;
+    background: #fff;
+    border-radius: 10px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.08);
+    padding: 1rem 1rem 1rem 1rem;
+    height: 420px;
+    overflow-y: auto;
+    margin-top: 0;
+}
+
+.leaderboard {
+    width: 100%;
+    margin-top: 0;
+} 

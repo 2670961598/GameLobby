@@ -1,0 +1,534 @@
+/* 全局样式重置 */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Microsoft YaHei', sans-serif;
+    background: #181A1B;
+    color: #fff;
+    overflow: hidden;
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+/* 通用样式 */
+.hidden {
+    display: none !important;
+}
+
+.screen {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    background: radial-gradient(circle at center, #2a2a2a 0%, #1a1a1a 100%);
+}
+
+/* 开始界面样式 */
+.game-title {
+    font-size: 48px;
+    color: #AFE59B;
+    text-shadow: 0 0 10px rgba(175, 229, 155, 0.5);
+    margin-bottom: 30px;
+}
+
+.rules {
+    background: rgba(255, 255, 255, 0.1);
+    padding: 20px;
+    border-radius: 10px;
+    margin-bottom: 30px;
+    text-align: left;
+}
+
+.rules ul {
+    list-style-position: inside;
+    margin-top: 10px;
+}
+
+.rules li {
+    margin: 5px 0;
+    line-height: 1.5;
+}
+
+.start-button {
+    width: 180px;
+    height: 60px;
+    border: none;
+    border-radius: 30px;
+    background: linear-gradient(45deg, #AFE59B, #ffffff);
+    color: #1a1a1a;
+    font-size: 24px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: transform 0.3s, box-shadow 0.3s;
+}
+
+.start-button:hover {
+    transform: scale(1.05);
+    box-shadow: 0 0 20px rgba(175, 229, 155, 0.5);
+}
+
+/* 游戏界面样式 */
+.game-area {
+    width: 720px;
+    height: 1440px;
+    position: relative;
+    overflow: hidden;
+    background: #181A1B;
+}
+
+.layer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+}
+
+.status-bar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    padding: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    z-index: 1000;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(5px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.timer {
+    font-size: 36px;
+    font-weight: bold;
+}
+
+.score-board {
+    display: flex;
+    gap: 20px;
+}
+
+.score {
+    font-size: 24px;
+    font-weight: bold;
+}
+
+.score.green { color: #AFE59B; }
+.score.purple { color: #7B75D3; }
+.score.red { color: #E37A80; }
+
+/* 角色样式 */
+.character {
+    position: absolute;
+    width: 44px;
+    height: 44px;
+    z-index: 10;
+    border: 5px solid #fff;
+    box-shadow: 0 0 0 6px rgba(0,0,0,0.5), 0 0 24px 8px #fff8, 0 0 32px 8px rgba(0,0,0,0.2);
+    transition: transform 0.2s, box-shadow 0.2s;
+    background: radial-gradient(circle at 60% 40%, #fff 20%, transparent 60%), var(--role-color, #AFE59B);
+}
+
+.player {
+    --role-color: #AFE59B;
+    border-radius: 50%;
+    box-shadow: 0 0 0 6px rgba(0,0,0,0.5), 0 0 32px 12px #AFE59B, 0 0 24px 8px #fff;
+}
+
+.ai {
+    background: transparent;
+    clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
+    position: absolute;
+}
+
+.ai.ai-purple {
+    --role-color: #7B75D3;
+    background: linear-gradient(135deg, #7B75D3 60%, #bcb8f7 100%);
+}
+
+.ai.ai-red {
+    --role-color: #E37A80;
+    background: linear-gradient(135deg, #E37A80 60%, #f7b8bc 100%);
+}
+
+.ai::after {
+    content: '';
+    position: absolute;
+    left: -6px;
+    top: -6px;
+    width: 56px;
+    height: 56px;
+    background: white;
+    clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
+    z-index: 0;
+    filter: drop-shadow(0 0 8px #0008);
+}
+
+/* 子弹样式 */
+.bullet {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    border: 4px solid #fff;
+    box-shadow: 0 0 12px 4px var(--bullet-color, #AFE59B), 0 0 0 6px #000a;
+    background: var(--bullet-color, #AFE59B);
+    position: absolute;
+    z-index: 100;
+    animation: bulletFlash 0.2s ease-out;
+}
+
+/* Buff样式 */
+.buff {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: radial-gradient(circle, #FFD700 60%, #fff200 100%);
+    box-shadow: 0 0 32px 12px #FFD700, 0 0 64px 24px #fff200, 0 0 0 8px #fff;
+    border: 4px solid #fff;
+    animation: buffPulse 1s infinite alternate;
+    position: absolute;
+    z-index: 200;
+}
+
+@keyframes buffPulse {
+    0% { box-shadow: 0 0 32px 12px #FFD700, 0 0 64px 24px #fff200, 0 0 0 8px #fff; transform: scale(1); }
+    100% { box-shadow: 0 0 64px 32px #FFD700, 0 0 96px 48px #fff200, 0 0 0 12px #fff; transform: scale(1.15); }
+}
+
+/* 结束界面样式 */
+.result-title {
+    font-size: 60px;
+    margin-bottom: 30px;
+}
+
+.final-score {
+    font-size: 36px;
+    margin-bottom: 40px;
+}
+
+.button-group {
+    display: flex;
+    gap: 20px;
+}
+
+.game-button {
+    width: 160px;
+    height: 50px;
+    border: none;
+    border-radius: 25px;
+    font-size: 20px;
+    cursor: pointer;
+    transition: transform 0.3s;
+    position: relative;
+    overflow: hidden;
+}
+
+.game-button:hover {
+    transform: scale(1.05);
+}
+
+.game-button::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    transition: width 0.3s, height 0.3s;
+}
+
+.game-button:hover::after {
+    width: 200%;
+    height: 200%;
+}
+
+/* 受击动画 */
+.character.hit {
+    animation: hitFlash 0.3s;
+}
+
+@keyframes hitFlash {
+    0% { filter: brightness(2) drop-shadow(0 0 8px #fff); }
+    100% { filter: none; }
+}
+
+/* 无敌动画 */
+.character.invincible {
+    animation: invinciblePulse 1s infinite alternate;
+}
+
+@keyframes invinciblePulse {
+    0% { box-shadow: 0 0 32px 12px #FFD700, 0 0 16px 4px #fff; }
+    100% { box-shadow: 0 0 16px 4px #FFD700, 0 0 16px 4px #fff; }
+}
+
+/* 响应式适配 */
+@media (max-height: 1440px) {
+    .game-area {
+        transform: scale(0.8);
+        transform-origin: top center;
+    }
+}
+
+@media (max-width: 720px) {
+    .game-area {
+        width: 100vw;
+        height: 100vh;
+        touch-action: none;
+    }
+    
+    .status-bar {
+        padding: 10px;
+    }
+    
+    .timer {
+        font-size: 28px;
+    }
+    
+    .score {
+        font-size: 20px;
+    }
+}
+
+/* 血条样式 */
+.health-bar {
+    position: absolute;
+    top: -12px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 40px;
+    height: 6px;
+    background: rgba(0, 0, 0, 0.5);
+    border-radius: 3px;
+    overflow: hidden;
+    z-index: 10;
+    border: 1px solid #222;
+}
+
+.health-bar-fill {
+    height: 100%;
+    width: 100%;
+    transition: width 0.3s, background-color 0.3s;
+}
+
+.health-bar-bg {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    background: rgba(255,255,255,0.08);
+    left: 0;
+    top: 0;
+    z-index: 1;
+}
+
+/* 轨迹样式 */
+.trail {
+    position: absolute;
+    border-radius: 50%;
+    opacity: 0.8;
+    transition: opacity 1s;
+    pointer-events: none;
+}
+
+/* 特效层样式 */
+.effect-layer {
+    z-index: 100;
+}
+
+/* 游戏结束动画 */
+@keyframes gameOver {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+    100% { transform: scale(1); }
+}
+
+.game-over {
+    animation: gameOver 0.5s ease-in-out;
+}
+
+/* 最后10秒特效 */
+@keyframes warningPulse {
+    0% { box-shadow: 0 0 0 0 rgba(227, 122, 128, 0.4); }
+    70% { box-shadow: 0 0 0 20px rgba(227, 122, 128, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(227, 122, 128, 0); }
+}
+
+.warning {
+    animation: warningPulse 1s infinite;
+}
+
+/* 角色旋转动画 */
+@keyframes rotate {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+/* 子弹发射特效 */
+@keyframes bulletFlash {
+    0% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.2); opacity: 0.8; }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+/* 游戏区域背景 */
+.background-layer {
+    background: linear-gradient(135deg, #23272b 0%, #181A1B 100%);
+}
+
+/* 状态栏样式优化 */
+.status-bar {
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(5px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.health-panel {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: flex-start;
+    gap: 8px;
+    position: absolute;
+    left: 8px;
+    top: 35px;
+    z-index: 1001;
+    background: rgba(30,30,30,0.92);
+    border-radius: 8px;
+    box-shadow: 0 1px 8px rgba(0,0,0,0.22);
+    padding: 9px 16px;
+}
+.health-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 80px;
+}
+.icon {
+    width: 18px;
+    height: 18px;
+}
+.player-icon {
+    border-radius: 50%;
+    background: #AFE59B;
+    box-shadow: 0 0 8px #AFE59B;
+    border: 2px solid #fff;
+}
+.ai-purple-icon {
+    background: #7B75D3;
+    clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
+    box-shadow: 0 0 8px #7B75D3;
+    border: 2px solid #fff;
+}
+.ai-red-icon {
+    background: #E37A80;
+    clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
+    box-shadow: 0 0 8px #E37A80;
+    border: 2px solid #fff;
+}
+.health-bar-ui {
+    width: 60px;
+    height: 11px;
+    border-radius: 12px;
+    padding: 0;
+    background: #222;
+    box-shadow: 0 0 8px #000a;
+    overflow: hidden;
+    position: relative;
+    border: 2px solid #fff;
+}
+.health-bar-fill-ui {
+    border-radius: 12px 0 0 12px;
+    height: 100%;
+    position: absolute;
+    left: 0;
+    top: 0;
+    z-index: 1;
+    transition: width 0.3s, background-color 0.3s;
+}
+.health-text {
+    display: none;
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 16px;
+    font-weight: bold;
+    color: #FFD700;
+    text-shadow: 0 0 8px rgba(255, 215, 0, 0.5);
+    z-index: 2;
+}
+.player-fill {
+    background: linear-gradient(90deg, #AFE59B, #d6f7c7);
+}
+.ai-purple-fill {
+    background: linear-gradient(90deg, #7B75D3, #bcb8f7);
+}
+.ai-red-fill {
+    background: linear-gradient(90deg, #E37A80, #f7b8bc);
+}
+
+@keyframes buffPulse {
+    0% { box-shadow: 0 0 24px 8px #FFD700, 0 0 48px 16px #fff200; transform: scale(1); }
+    100% { box-shadow: 0 0 48px 24px #FFD700, 0 0 64px 32px #fff200; transform: scale(1.15); }
+}
+
+.character.buffed {
+    box-shadow: 0 0 32px 16px #FFD700, 0 0 24px 8px #fff200, 0 0 16px 4px #fff;
+    animation: buffedPulse 0.5s infinite alternate;
+    z-index: 20;
+}
+@keyframes buffedPulse {
+    0% { transform: scale(1); filter: brightness(1.2); }
+    100% { transform: scale(1.15); filter: brightness(1.5); }
+}
+
+/* 轨迹色块 */
+.trail-canvas {
+    image-rendering: pixelated;
+    opacity: 0.65;
+    filter: grayscale(0.25) brightness(0.85) blur(0.5px);
+    pointer-events: none;
+}
+
+.buff-new {
+    position: absolute;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: radial-gradient(circle, #FFD700 60%, #fff200 100%);
+    box-shadow: 0 0 32px 12px #FFD700, 0 0 64px 24px #fff200;
+    animation: buffPulse 1s infinite alternate;
+    z-index: 301;
+    border: 3px solid #fffbe6;
+}
+@keyframes buffPulse {
+    0% { box-shadow: 0 0 32px 12px #FFD700, 0 0 64px 24px #fff200; transform: scale(1); }
+    100% { box-shadow: 0 0 48px 24px #FFD700, 0 0 80px 32px #fff200; transform: scale(1.15); }
+}
+
+#gameArea {
+    position: relative;
+}
+.buff-layer {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 300;
+} 

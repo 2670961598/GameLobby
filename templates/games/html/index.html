@@ -1,0 +1,240 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>不要被击中！</title>
+  <style>
+    body {
+      margin: 0;
+      background: #111;
+      color: white;
+      font-family: sans-serif;
+      text-align: center;
+    }
+
+    #game {
+      position: relative;
+      width: 800px;
+      height: 600px;
+      margin: 20px auto;
+      background: #222;
+      overflow: hidden;
+      border: 2px solid #fff;
+    }
+
+    #player {
+      position: absolute;
+      width: 30px;
+      height: 30px;
+      background: limegreen;
+      border-radius: 50%;
+    }
+
+    .bullet {
+      position: absolute;
+      width: 10px;
+      height: 10px;
+      background: red;
+      border-radius: 50%;
+    }
+
+    #info {
+      margin-top: 10px;
+    }
+
+    #restart {
+      margin-top: 10px;
+      padding: 8px 16px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>不要被击中！</h1>
+  <div id="game">
+    <div id="player"></div>
+  </div>
+  <div id="info">
+    生存时间：<span id="timer">0.00</span> 秒
+  </div>
+  <button id="restart">重新开始</button>
+
+  <script>
+    const game = document.getElementById('game');
+    const player = document.getElementById('player');
+    const timerDisplay = document.getElementById('timer');
+    const restartBtn = document.getElementById('restart');
+
+    const gameWidth = 800;
+    const gameHeight = 600;
+    const playerSpeed = 4;
+    const bulletBaseSpeed = 1.5;
+
+    let keys = {};
+    let bullets = [];
+    let animationId;
+    let startTime;
+    let gameOver = false;
+    let bulletTimer = 0;
+
+    let difficultyMultiplier = 1;
+
+    function resetGame() {
+      // 初始化
+      player.style.left = '385px';
+      player.style.top = '285px';
+      bullets.forEach(b => b.el.remove());
+      bullets = [];
+      keys = {};
+      gameOver = false;
+      startTime = performance.now();
+      bulletTimer = 0;
+      difficultyMultiplier = 1;
+      timerDisplay.textContent = '0.00';
+      cancelAnimationFrame(animationId);
+      loop();
+    }
+
+    function loop(timestamp) {
+      if (gameOver) return;
+
+      // 更新时间
+      const elapsed = (timestamp - startTime) / 1000;
+      timerDisplay.textContent = elapsed.toFixed(2);
+
+      // 难度加成
+      difficultyMultiplier = 1 + elapsed / 10;
+
+      movePlayer();
+      moveBullets();
+      spawnBullets();
+
+      animationId = requestAnimationFrame(loop);
+    }
+
+    function movePlayer() {
+      let x = player.offsetLeft;
+      let y = player.offsetTop;
+
+      if (keys['w'] && y > 0) y -= playerSpeed;
+      if (keys['s'] && y + 30 < gameHeight) y += playerSpeed;
+      if (keys['a'] && x > 0) x -= playerSpeed;
+      if (keys['d'] && x + 30 < gameWidth) x += playerSpeed;
+
+      player.style.left = x + 'px';
+      player.style.top = y + 'px';
+    }
+
+    function spawnBullets() {
+      const now = performance.now();
+      const interval = 1000 / difficultyMultiplier;
+
+      if (now - bulletTimer > interval) {
+        bulletTimer = now;
+
+        const side = Math.floor(Math.random() * 4); // 0: top, 1: right, 2: bottom, 3: left
+        let x, y, dx, dy;
+
+        switch (side) {
+          case 0: // top
+            x = Math.random() * gameWidth;
+            y = 0;
+            dx = (Math.random() - 0.5) * 2;
+            dy = 1;
+            break;
+          case 1: // right
+            x = gameWidth;
+            y = Math.random() * gameHeight;
+            dx = -1;
+            dy = (Math.random() - 0.5) * 2;
+            break;
+          case 2: // bottom
+            x = Math.random() * gameWidth;
+            y = gameHeight;
+            dx = (Math.random() - 0.5) * 2;
+            dy = -1;
+            break;
+          case 3: // left
+            x = 0;
+            y = Math.random() * gameHeight;
+            dx = 1;
+            dy = (Math.random() - 0.5) * 2;
+            break;
+        }
+
+        const len = Math.sqrt(dx * dx + dy * dy);
+        dx /= len;
+        dy /= len;
+
+        const bullet = document.createElement('div');
+        bullet.classList.add('bullet');
+        bullet.style.left = x + 'px';
+        bullet.style.top = y + 'px';
+        game.appendChild(bullet);
+
+        bullets.push({
+          el: bullet,
+          x: x,
+          y: y,
+          dx: dx,
+          dy: dy,
+          speed: bulletBaseSpeed * difficultyMultiplier
+        });
+      }
+    }
+
+    function moveBullets() {
+      const px = player.offsetLeft;
+      const py = player.offsetTop;
+
+      bullets.forEach((b, index) => {
+        b.x += b.dx * b.speed;
+        b.y += b.dy * b.speed;
+
+        b.el.style.left = b.x + 'px';
+        b.el.style.top = b.y + 'px';
+
+        // 碰撞检测
+        if (
+          b.x < px + 30 &&
+          b.x + 10 > px &&
+          b.y < py + 30 &&
+          b.y + 10 > py
+        ) {
+          endGame();
+        }
+
+        // 移除超出边界的弹幕
+        if (
+          b.x < -20 || b.x > gameWidth + 20 ||
+          b.y < -20 || b.y > gameHeight + 20
+        ) {
+          b.el.remove();
+          bullets.splice(index, 1);
+        }
+      });
+    }
+
+    function endGame() {
+      gameOver = true;
+      cancelAnimationFrame(animationId);
+      setTimeout(() => {
+        alert('你被击中了！生存时间：' + timerDisplay.textContent + ' 秒');
+      }, 50);
+    }
+
+    document.addEventListener('keydown', e => {
+      keys[e.key.toLowerCase()] = true;
+    });
+
+    document.addEventListener('keyup', e => {
+      keys[e.key.toLowerCase()] = false;
+    });
+
+    restartBtn.addEventListener('click', resetGame);
+    window.addEventListener('load', resetGame);
+  </script>
+</body>
+</html>

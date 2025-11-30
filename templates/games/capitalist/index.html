@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Capitalist - 资本家游戏</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-color: #f0f0f0;
+        }
+        
+        .game-container {
+            width: 800px;
+            height: 600px;
+            background-color: white;
+            position: relative;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .start-screen {
+            text-align: center;
+        }
+        
+        .game-title {
+            font-size: 36px;
+            color: #333;
+            margin-bottom: 30px;
+        }
+        
+        .start-button {
+            padding: 15px 30px;
+            font-size: 20px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        
+        .start-button:hover {
+            background-color: #45a049;
+        }
+        
+        .game-screen {
+            display: none;
+            width: 100%;
+            height: 100%;
+            position: relative;
+        }
+        
+        .houses-container {
+            width: 100%;
+            height: 70%;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .house {
+            position: absolute;
+            width: 60px;
+            height: 60px;
+            background-color: #ff6b6b;
+            clip-path: polygon(50% 0%, 100% 50%, 100% 100%, 0% 100%, 0% 50%);
+        }
+        
+        .progress-container {
+            width: 80%;
+            height: 20px;
+            background-color: #eee;
+            border-radius: 10px;
+            margin: 20px 0;
+            overflow: hidden;
+        }
+        
+        .progress-bar {
+            width: 0%;
+            height: 100%;
+            background-color: #4CAF50;
+            transition: width 0.1s linear;
+        }
+        
+        .status-text {
+            font-size: 18px;
+            color: #333;
+            margin-top: 10px;
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .modal-content {
+            background-color: white;
+            padding: 30px;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.2);
+            animation: modalShow 0.3s ease-out;
+        }
+        
+        @keyframes modalShow {
+            from {
+                transform: scale(0.8);
+                opacity: 0;
+            }
+            to {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+        
+        .modal-title {
+            font-size: 24px;
+            margin-bottom: 20px;
+            color: #333;
+        }
+        
+        .modal-button {
+            padding: 10px 20px;
+            font-size: 16px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        
+        .modal-button:hover {
+            background-color: #45a049;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <div class="start-screen">
+            <div class="game-title">资本做局器</div>
+            <button class="start-button">开始做局</button>
+        </div>
+        <div class="game-screen">
+            <div class="houses-container"></div>
+            <div class="progress-container">
+                <div class="progress-bar"></div>
+            </div>
+            <div class="status-text">正在准备资金布局</div>
+        </div>
+    </div>
+
+    <div class="modal" id="resultModal">
+        <div class="modal-content">
+            <div class="modal-title">资本做局成功！你被资本浪费了15秒！</div>
+            <button class="modal-button" onclick="document.getElementById('resultModal').style.display='none'">确定</button>
+        </div>
+    </div>
+
+    <script src="capitalist.js"></script>
+</body>
+</html> 

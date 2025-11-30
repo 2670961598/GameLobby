@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stacking Game</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="game-container">
+        <div class="game-area" id="game-canvas">
+            <div class="score">Level: <span id="level">0</span></div>
+        </div>
+        <div class="controls">
+            <button id="start-btn">Start Game</button>
+            <div class="drop-button-container">
+                <button id="drop-btn" disabled>放</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="leaderboard-container">
+        <h2>排行榜</h2>
+        <table class="leaderboard">
+            <thead>
+                <tr>
+                    <th>排名</th>
+                    <th>名字</th>
+                    <th>分数</th>
+                </tr>
+            </thead>
+            <tbody id="leaderboardBody">
+            </tbody>
+        </table>
+    </div>
+
+    <div id="game-over-modal" class="modal">
+        <div class="modal-content">
+            <h2>游戏结束</h2>
+            <p>你的分数：<span id="final-score">0</span></p>
+            <p>请输入你的名字：</p>
+            <input type="text" id="playerName" placeholder="输入名字">
+            <button id="submitScore">提交</button>
+            <button id="restart-btn">重新开始</button>
+        </div>
+    </div>
+
+    <script src="game.js"></script>
+</body>
+</html> 

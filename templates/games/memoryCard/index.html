@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>记忆翻牌</title>
+  <style>
+    body {font-family: Arial, Helvetica, sans-serif;display:flex;flex-direction:column;align-items:center;background:#f5f5f5;margin:0}
+    h1 {margin:20px 0 10px}
+    #info {margin-bottom:10px;font-size:18px;font-weight:bold}
+    #grid {display:grid;gap:10px;justify-content:center;margin-top:10px}
+    .card {width:60px;height:60px;background:#7f8c8d;border-radius:6px;display:flex;justify-content:center;align-items:center;cursor:pointer;font-weight:bold;font-size:20px;color:#fff;user-select:none;}
+    .card.flipped {background:var(--color);color:#000;cursor:default}
+    #btn-start {margin-top:15px;padding:8px 20px;font-size:16px;cursor:pointer}
+    a.back{margin-top:10px;padding:6px 16px;background:#3498db;color:#fff;border-radius:4px;text-decoration:none;display:inline-block}
+  </style>
+</head>
+<body>
+  <h1>记忆翻牌</h1>
+  <div id="info">时间: 30s | 得分: 0</div>
+  <div id="grid"></div>
+  <button id="btn-start">开始游戏</button>
+  <a href="/" class="back">返回列表</a>
+
+<script>
+const gridEl = document.getElementById('grid');
+const infoEl = document.getElementById('info');
+const startBtn = document.getElementById('btn-start');
+
+let gridSize = 2; // starting size (n x n). will increment by 2 each level
+const COLORS = ['#e74c3c','#9b59b6','#f1c40f','#1abc9c','#2ecc71','#3498db','#e67e22','#95a5a6','#34495e','#d35400','#16a085','pink','plum','gold','cyan','khaki','salmon','steelblue'];
+
+let timeLimit=30;
+let timeLeft=timeLimit;
+let timerId=null;
+let firstCard=null;
+let lock=false;
+let score=0;
+let flippedCount=0;
+let playerName='';
+
+function updateInfo(){
+  infoEl.textContent=`时间: ${timeLeft}s | 得分: ${score}`;
+}
+
+function shuffle(arr){
+  for(let i=arr.length-1;i>0;i--){
+    const j=Math.floor(Math.random()* (i+1));
+    [arr[i],arr[j]]=[arr[j],arr[i]];
+  }
+  return arr;
+}
+
+function createLevel(){
+  gridEl.innerHTML='';
+  const size=gridSize;
+  gridEl.style.gridTemplateColumns=`repeat(${size},60px)`;
+  const pairCount=size*size/2;
+  const values=[];
+  for(let i=0;i<pairCount;i++){values.push(i);values.push(i);} // duplicate values
+  shuffle(values);
+  flippedCount=0;
+  values.forEach(v=>{
+    const card=document.createElement('div');
+    card.className='card';
+    const color=COLORS[v%COLORS.length];
+    card.dataset.value=v;
+    card.style.setProperty('--color',color);
+    card.addEventListener('click',()=>onCardClick(card));
+    gridEl.appendChild(card);
+  });
+}
+
+function onCardClick(card){
+  if(lock||card.classList.contains('flipped')) return;
+  card.classList.add('flipped');
+  card.textContent=Number(card.dataset.value)+1;
+  if(!firstCard){
+    firstCard=card;
+    return;
+  }
+  // second card
+  lock=true;
+  if(firstCard.dataset.value===card.dataset.value){
+    // match
+    score+=1;
+    flippedCount+=2;
+    firstCard=null;
+    lock=false;
+    if(flippedCount===gridEl.children.length){
+      nextLevel();
+    }
+    updateInfo();
+  }else{
+    // not match
+    setTimeout(()=>{
+      firstCard.classList.remove('flipped');
+      firstCard.textContent='';
+      card.classList.remove('flipped');
+      card.textContent='';
+      firstCard=null;
+      lock=false;
+    },600);
+  }
+}
+
+function startTimer(){
+  timerId=setInterval(()=>{
+    timeLeft-=1;
+    updateInfo();
+    if(timeLeft<=0){
+      endGame();
+    }
+  },1000);
+}
+
+function startGame(){
+  if(timerId) return;
+  playerName=prompt('请输入姓名：',playerName||'');
+  if(!playerName) return;
+  score=0;timeLeft=timeLimit;gridSize=2;
+  updateInfo();
+  createLevel();
+  startTimer();
+  startBtn.disabled=true;
+}
+
+function nextLevel(){
+  gridSize += 2;
+  // double remaining time
+  timeLeft *= 2;
+  createLevel();
+  updateInfo();
+}
+
+function endGame(){
+  clearInterval(timerId);
+  timerId=null;
+  alert(`游戏结束！\n得分: ${score}`);
+  sendScore();
+  startBtn.disabled=false;
+}
+
+function sendScore(){
+  fetch('/submit-score',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({game:'memoryCard',difficulty:'medium',name:playerName,score:score})
+  }).then(r=>r.json()).then(res=>{
+    if(res.status==='ok'){
+      alert(`已上传！当前排名 ${res.rank}/${res.total}`);
+    }
+  }).catch(console.error);
+}
+
+startBtn.addEventListener('click',startGame);
+</script>
+</body>
+</html>
